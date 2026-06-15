@@ -11,6 +11,7 @@ import {
   statusEfetivo,
   type Boleto,
 } from '../../../../mocks'
+import { IconAlertTriangle, IconClock } from '../../../../components/icons'
 import { abonoAtivoDoBoleto, valorFinalDoBoleto } from '../../../../lib/abonos'
 import { useAbonos } from '../../../../hooks/useAbonos'
 import { StatusBadge } from '../../../../components/ui/StatusBadge'
@@ -45,9 +46,13 @@ interface KanbanCardProps {
   onAbrir: (boleto: Boleto) => void
   /** ausente quando o perfil não pode registrar comunicação */
   onRegistrarComunicacao?: (boleto: Boleto) => void
+  /** cartão está na coluna Negociações — exibe data da promessa */
+  promessaData?: string | null
+  /** promessa de pagamento não cumprida — badge de alerta */
+  promessaQuebrada?: boolean
 }
 
-export function KanbanCard({ boleto, marco, comunicacoes, onAbrir, onRegistrarComunicacao }: KanbanCardProps) {
+export function KanbanCard({ boleto, marco, comunicacoes, onAbrir, onRegistrarComunicacao, promessaData, promessaQuebrada }: KanbanCardProps) {
   const abonos = useAbonos()
   const cliente = getClienteById(boleto.clienteId)
   const empresa = getEmpresa(getEmpresaDoBoleto(boleto))
@@ -140,6 +145,24 @@ export function KanbanCard({ boleto, marco, comunicacoes, onAbrir, onRegistrarCo
       {abonoAtivo && (
         <div className="mt-2">
           <EstadoAbonoBadge estado={abonoAtivo.estado} />
+        </div>
+      )}
+
+      {/* promessa de pagamento ativa — data esperada pelo cliente */}
+      {promessaData && !promessaQuebrada && (
+        <div className="mt-2 flex items-center gap-1.5 rounded-sm border border-avencer-border bg-avencer-bg px-2 py-1">
+          <IconClock size={11} className="shrink-0 text-avencer-fg" />
+          <span className="label-mono text-avencer-fg">
+            Pagamento prometido: {formatarData(promessaData)}
+          </span>
+        </div>
+      )}
+
+      {/* promessa não cumprida — negociação mal sucedida */}
+      {promessaQuebrada && (
+        <div className="mt-2 flex items-center gap-1.5 rounded-sm border border-inadimplente-border bg-inadimplente-bg px-2 py-1">
+          <IconAlertTriangle size={11} className="shrink-0 text-inadimplente-fg" />
+          <span className="label-mono text-inadimplente-fg">Negociação mal sucedida</span>
         </div>
       )}
 

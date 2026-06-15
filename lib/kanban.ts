@@ -10,7 +10,7 @@
 // inclusive as padrão — que servem só de seed e podem ser restauradas.
 // Um marco pertence a uma única coluna.
 
-import { ancoraParaDias, diasEntre, DATA_BASE, type Boleto } from '../mocks'
+import { ancoraParaDias, diasEntre, DATA_BASE, type Boleto, type Comunicacao } from '../mocks'
 import { lerReguas } from './reguasStore'
 
 export interface ColunaKanban {
@@ -191,4 +191,45 @@ export function colunaDoBoleto(b: Boleto, colunas: ColunaKanban[]): ColunaKanban
   const marco = marcoDoBoleto(b, colunas)
   if (!marco) return null
   return colunas.find((c) => c.marcos.includes(marco)) ?? null
+}
+
+/** coluna imediatamente seguinte na sequência — null se já for a última */
+export function proximaColuna(coluna: ColunaKanban, colunas: ColunaKanban[]): ColunaKanban | null {
+  const sorted = [...colunas].sort(
+    (a, b) => Math.min(...a.marcos.map(ancoraParaDias)) - Math.min(...b.marcos.map(ancoraParaDias)),
+  )
+  const idx = sorted.findIndex((c) => c.id === coluna.id)
+  return idx >= 0 && idx < sorted.length - 1 ? sorted[idx + 1] : null
+}
+
+// ── Negociação ────────────────────────────────────────────────────────────
+// Uma cobrança entra em "Negociações" quando a comunicação mais recente com
+// promessaPagamento.data registrada tem data futura e situação pendente.
+// Se a data passou e o título continua em aberto, a promessa está quebrada:
+// o card exibe o badge e sobe uma coluna na régua (penalidade de processo).
+
+export interface NegociacaoStatus {
+  emNegociacao: boolean      // aguardando promessa futura → coluna Negociações
+  promessaQuebrada: boolean  // data passou, não pagou → badge + próxima coluna
+  promessaData: string | null
+}
+
+/** resolve o estado de negociação de um boleto a partir das suas comunicações */
+export function resolverNegociacao(
+  boletoId: string,
+  comunicacoes: Comunicacao[],
+): NegociacaoStatus {
+  const comPromessa = comunicacoes
+    .filter((c) => c.boletoIds?.includes(boletoId) && c.promessaPagamento?.data)
+    .sort((a, b) => b.dataHora.localeCompare(a.dataHora))
+
+  if (!comPromessa.length) {
+    return { emNegociacao: false, promessaQuebrada: false, promessaData: null }
+  }
+
+  const { data, situacao } = comPromessa[0].promessaPagamento!
+  const quebrada = situacao === 'quebrada' || (situacao === 'pendente' && data <= DATA_BASE)
+  const ativa    = situacao === 'pendente' && data > DATA_BASE
+
+  return { emNegociacao: ativa, promessaQuebrada: quebrada, promessaData: data }
 }

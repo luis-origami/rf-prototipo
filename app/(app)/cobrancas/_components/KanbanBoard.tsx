@@ -1,14 +1,16 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { formatarMoeda, type Boleto } from '../../../../mocks'
+import { formatarMoeda, type Boleto, type Comunicacao } from '../../../../mocks'
 import {
   colunaDoBoleto,
   diasDoBoleto,
   marcoDoBoleto,
+  proximaColuna,
+  resolverNegociacao,
   type ColunaKanban,
 } from '../../../../lib/kanban'
-import { IconChevronLeft, IconChevronRight, IconX } from '../../../../components/icons'
+import { IconChevronLeft, IconChevronRight, IconClock, IconX } from '../../../../components/icons'
 import { KanbanCard } from './KanbanCard'
 
 // largura da coluna (w-80 = 320px) + gap-4 — passo das setas de rolagem
@@ -27,6 +29,8 @@ interface KanbanBoardProps {
   /** etapas configuradas — vindas do store (useColunasKanban) */
   colunas: ColunaKanban[]
   comunicacoesDoBoleto: (boleto: Boleto) => number
+  /** todas as comunicações (seed + sessão) usadas para resolver negociações */
+  todasComunicacoes: Comunicacao[]
   onAbrir: (boleto: Boleto) => void
   onRegistrarComunicacao?: (boleto: Boleto) => void
   /** remoção de etapas — ausente sem permissão (gestão vive no editor dedicado) */
@@ -37,6 +41,7 @@ export function KanbanBoard({
   boletos,
   colunas,
   comunicacoesDoBoleto,
+  todasComunicacoes,
   onAbrir,
   onRegistrarComunicacao,
   onRemoverColuna,
@@ -76,18 +81,37 @@ export function KanbanBoard({
     scrollRef.current?.scrollBy({ left: direcao * PASSO_COLUNA, behavior: 'smooth' })
   }
 
-  const porColuna = useMemo(() => {
-    const grupos = new Map<string, Boleto[]>(colunas.map((c) => [c.id, []]))
+  // item de coluna normal: boleto + flag de promessa quebrada
+  type ItemColuna = { boleto: Boleto; promessaQuebrada: boolean }
+
+  const { porColuna, emNegociacao } = useMemo(() => {
+    const grupos = new Map<string, ItemColuna[]>(colunas.map((c) => [c.id, []]))
+    const negociando: Array<{ boleto: Boleto; promessaData: string }> = []
+
     for (const b of boletos) {
-      const coluna = colunaDoBoleto(b, colunas)
-      // sem marco atingido = ainda fora da régua — não aparece no board
-      if (coluna) grupos.get(coluna.id)!.push(b)
+      const neg = resolverNegociacao(b.id, todasComunicacoes)
+
+      if (neg.emNegociacao) {
+        negociando.push({ boleto: b, promessaData: neg.promessaData! })
+        continue
+      }
+
+      // promessa quebrada → avança uma coluna (penalidade de processo)
+      const natural = colunaDoBoleto(b, colunas)
+      if (!natural) continue
+      const destino = neg.promessaQuebrada ? (proximaColuna(natural, colunas) ?? natural) : natural
+      grupos.get(destino.id)!.push({ boleto: b, promessaQuebrada: neg.promessaQuebrada })
     }
+
     for (const grupo of grupos.values()) {
-      grupo.sort((a, b) => diasDoBoleto(b) - diasDoBoleto(a) || b.valor - a.valor)
+      grupo.sort(
+        (a, b) => diasDoBoleto(b.boleto) - diasDoBoleto(a.boleto) || b.boleto.valor - a.boleto.valor,
+      )
     }
-    return grupos
-  }, [boletos, colunas])
+    negociando.sort((a, b) => a.promessaData.localeCompare(b.promessaData))
+
+    return { porColuna: grupos, emNegociacao: negociando }
+  }, [boletos, colunas, todasComunicacoes])
 
   return (
     <div className="relative">
@@ -142,61 +166,104 @@ export function KanbanBoard({
       )}
 
       <div ref={scrollRef} className="flex items-start gap-4 overflow-x-auto pb-2">
-      {colunas.map((coluna) => {
-        const itens = porColuna.get(coluna.id) ?? []
-        const soma = itens.reduce((s, b) => s + b.valor, 0)
-        return (
-          <section
-            key={coluna.id}
-            aria-label={`${coluna.titulo} — ${itens.length} títulos`}
-            className="w-80 shrink-0 rounded-lg border border-line bg-neutral-50"
-          >
-            {/* cabeçalho: nome, marcos agrupados, contagem e soma em aberto */}
-            <header className="border-b border-line px-3 py-2.5">
-              <div className="flex items-baseline justify-between gap-2">
-                <h3 className="flex items-center gap-1.5 text-sm font-semibold text-ink">
-                  {coluna.titulo}
-                  {onRemoverColuna && (
-                    <button
-                      type="button"
-                      title="Remover etapa"
-                      aria-label={`Remover a etapa ${coluna.titulo}`}
-                      onClick={() => onRemoverColuna(coluna.id)}
-                      className="rounded-sm p-0.5 text-ink-muted transition-colors duration-100
-                        hover:text-ink focus-ring"
-                    >
-                      <IconX size={13} />
-                    </button>
-                  )}
-                </h3>
-                <span className="num font-mono text-xs text-ink-muted">{coluna.marcos.join(' · ')}</span>
-              </div>
-              <div className="num mt-0.5 font-mono text-xs text-ink-muted">
-                {itens.length} {itens.length === 1 ? 'título' : 'títulos'} · {formatarMoeda(soma)}
-              </div>
-            </header>
+        {/* colunas baseadas em tempo (configuráveis) */}
+        {colunas.map((coluna) => {
+          const itens = porColuna.get(coluna.id) ?? []
+          const soma = itens.reduce((s, item) => s + item.boleto.valor, 0)
+          return (
+            <section
+              key={coluna.id}
+              aria-label={`${coluna.titulo} — ${itens.length} títulos`}
+              className="w-80 shrink-0 rounded-lg border border-line bg-neutral-50"
+            >
+              <header className="border-b border-line px-3 py-2.5">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h3 className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+                    {coluna.titulo}
+                    {onRemoverColuna && (
+                      <button
+                        type="button"
+                        title="Remover etapa"
+                        aria-label={`Remover a etapa ${coluna.titulo}`}
+                        onClick={() => onRemoverColuna(coluna.id)}
+                        className="rounded-sm p-0.5 text-ink-muted transition-colors duration-100
+                          hover:text-ink focus-ring"
+                      >
+                        <IconX size={13} />
+                      </button>
+                    )}
+                  </h3>
+                  <span className="num font-mono text-xs text-ink-muted">{coluna.marcos.join(' · ')}</span>
+                </div>
+                <div className="num mt-0.5 font-mono text-xs text-ink-muted">
+                  {itens.length} {itens.length === 1 ? 'título' : 'títulos'} · {formatarMoeda(soma)}
+                </div>
+              </header>
 
-            <div className="flex flex-col gap-2 p-2">
-              {itens.length === 0 ? (
-                <p className="rounded-md border border-dashed border-line-strong px-3 py-6 text-center text-xs text-ink-muted">
-                  Nenhum título neste estágio.
-                </p>
-              ) : (
-                itens.map((b) => (
-                  <KanbanCard
-                    key={b.id}
-                    boleto={b}
-                    marco={marcoDoBoleto(b, colunas)}
-                    comunicacoes={comunicacoesDoBoleto(b)}
-                    onAbrir={onAbrir}
-                    onRegistrarComunicacao={onRegistrarComunicacao}
-                  />
-                ))
-              )}
+              <div className="flex flex-col gap-2 p-2">
+                {itens.length === 0 ? (
+                  <p className="rounded-md border border-dashed border-line-strong px-3 py-6 text-center text-xs text-ink-muted">
+                    Nenhum título neste estágio.
+                  </p>
+                ) : (
+                  itens.map(({ boleto: b, promessaQuebrada }) => (
+                    <KanbanCard
+                      key={b.id}
+                      boleto={b}
+                      marco={marcoDoBoleto(b, colunas)}
+                      comunicacoes={comunicacoesDoBoleto(b)}
+                      promessaQuebrada={promessaQuebrada}
+                      onAbrir={onAbrir}
+                      onRegistrarComunicacao={onRegistrarComunicacao}
+                    />
+                  ))
+                )}
+              </div>
+            </section>
+          )
+        })}
+
+        {/* Negociações — coluna especial, baseada em estado (promessa de pagamento ativa).
+            Sempre exibida ao final; a cobrança entra quando há promessa futura e sai
+            (para a próxima coluna natural) se a data passar sem pagamento. */}
+        <section
+          aria-label={`Negociações — ${emNegociacao.length} títulos`}
+          className="w-80 shrink-0 rounded-lg border border-avencer-border bg-avencer-bg"
+        >
+          <header className="border-b border-avencer-border px-3 py-2.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+                <IconClock size={13} className="shrink-0 text-avencer-fg" />
+                Negociações
+              </h3>
+              <span className="num font-mono text-xs text-ink-muted">Promessa ativa</span>
             </div>
-          </section>
-        )
-      })}
+            <div className="num mt-0.5 font-mono text-xs text-ink-muted">
+              {emNegociacao.length} {emNegociacao.length === 1 ? 'título' : 'títulos'} ·{' '}
+              {formatarMoeda(emNegociacao.reduce((s, { boleto }) => s + boleto.valor, 0))}
+            </div>
+          </header>
+
+          <div className="flex flex-col gap-2 p-2">
+            {emNegociacao.length === 0 ? (
+              <p className="rounded-md border border-dashed border-avencer-border px-3 py-6 text-center text-xs text-ink-muted">
+                Nenhum título aguardando promessa.
+              </p>
+            ) : (
+              emNegociacao.map(({ boleto: b, promessaData }) => (
+                <KanbanCard
+                  key={b.id}
+                  boleto={b}
+                  marco={marcoDoBoleto(b, colunas)}
+                  comunicacoes={comunicacoesDoBoleto(b)}
+                  promessaData={promessaData}
+                  onAbrir={onAbrir}
+                  onRegistrarComunicacao={onRegistrarComunicacao}
+                />
+              ))
+            )}
+          </div>
+        </section>
       </div>
     </div>
   )

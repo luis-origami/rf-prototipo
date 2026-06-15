@@ -168,6 +168,16 @@ function CobrancasContent() {
     [filtradas, reguaFiltro, colunasKanban],
   )
 
+  // todas as comunicações (seed + sessão) dos boletos do kanban — usadas para
+  // derivar o estado de negociação (promessa ativa vs. quebrada)
+  const todasComunicacoesKanban = useMemo(
+    () => [
+      ...boletosKanban.flatMap((b) => getComunicacoesDoBoleto(b.id)),
+      ...comunicacoesExtras,
+    ],
+    [boletosKanban, comunicacoesExtras],
+  )
+
   function contarComunicacoes(b: Boleto): number {
     return (
       getComunicacoesDoBoleto(b.id).length +
@@ -469,6 +479,7 @@ function CobrancasContent() {
             boletos={boletosKanban}
             colunas={colunasKanban}
             comunicacoesDoBoleto={contarComunicacoes}
+            todasComunicacoes={todasComunicacoesKanban}
             onAbrir={(b) => router.push(`/cobrancas/${b.id}`)}
             onRegistrarComunicacao={podeComunicar ? setComBoleto : undefined}
           />
