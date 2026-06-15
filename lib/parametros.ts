@@ -18,8 +18,8 @@ export const PARAMETROS_ENCARGOS: { juros: ParametroTaxa; multa: ParametroTaxa }
   },
   multa: {
     pct: 0.02,
-    confirmado: false,
+    confirmado: true,
     descricao: '2% sobre o valor original',
-    observacao: 'Percentual não fechado — a confirmar com a Fernanda (RF).',
+    observacao: 'Confirmado.',
   },
 }

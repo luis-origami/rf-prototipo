@@ -11,7 +11,8 @@ import { Switch } from '../../../components/ui/Switch'
 import { SyncStatus } from '../../../components/ui/SyncStatus'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { useToast } from '../../../hooks/useToast'
-import { IconRefreshCw, IconDatabase, IconPercent } from '../../../components/icons'
+import { IconRefreshCw, IconDatabase, IconPercent, IconEdit, IconCheck, IconX } from '../../../components/icons'
+import { Input } from '../../../components/ui/Input'
 
 type LogTipo = 'info' | 'warning' | 'error'
 
@@ -56,8 +57,17 @@ export default function Configuracoes() {
   const [simErro, setSimErro] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncText, setSyncText] = useState('Sincronizado há 12 min')
-  // flag de confirmação da multa — pendente com o cliente (protótipo: sessão)
-  const [multaConfirmada, setMultaConfirmada] = useState(PARAMETROS_ENCARGOS.multa.confirmado)
+  const [editando, setEditando] = useState<'juros' | 'multa' | null>(null)
+  const [valorJuros, setValorJuros] = useState(String(PARAMETROS_ENCARGOS.juros.pct * 100))
+  const [valorMulta, setValorMulta] = useState(String(PARAMETROS_ENCARGOS.multa.pct * 100))
+
+  const descJuros = `${valorJuros}% a.m. · pro rata die`
+  const descMulta = `${valorMulta}% sobre o valor original`
+
+  function salvar(campo: 'juros' | 'multa') {
+    setEditando(null)
+    toast(campo === 'juros' ? 'Juros de mora atualizados.' : 'Multa atualizada.')
+  }
 
   function sincronizar() {
     setSyncing(true)
@@ -145,58 +155,82 @@ export default function Configuracoes() {
               <Card.Title>Parâmetros de encargos</Card.Title>
               <span className="label-mono text-ink-muted">Estado de processo</span>
             </Card.Header>
-            <Card.Body className="flex flex-col gap-4">
+            <Card.Body>
               <dl className="flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-4">
                   <dt className="flex items-center gap-2.5 text-sm font-medium text-ink">
                     <IconPercent size={15} className="text-steel-400" />
                     Juros de mora
                   </dt>
-                  <dd className="num flex items-center gap-3 font-mono text-sm text-ink">
-                    {PARAMETROS_ENCARGOS.juros.descricao}
-                    <span className="rounded-sm border border-success-border bg-success-bg px-2 py-0.5 font-mono text-xs font-medium text-success-fg">
-                      Confirmado
-                    </span>
-                  </dd>
+                  {editando === 'juros' ? (
+                    <dd className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={valorJuros}
+                          onChange={(e) => setValorJuros(e.target.value)}
+                          className="w-20"
+                          autoFocus
+                        />
+                        <span className="text-sm text-ink-muted">% a.m.</span>
+                      </div>
+                      <button type="button" onClick={() => salvar('juros')} className="rounded p-1 text-success-fg hover:bg-success-bg" aria-label="Confirmar">
+                        <IconCheck size={15} />
+                      </button>
+                      <button type="button" onClick={() => setEditando(null)} className="rounded p-1 text-ink-muted hover:bg-neutral-100" aria-label="Cancelar">
+                        <IconX size={15} />
+                      </button>
+                    </dd>
+                  ) : (
+                    <dd className="num flex items-center gap-3 font-mono text-sm text-ink">
+                      {descJuros}
+                      <button type="button" onClick={() => setEditando('juros')} className="rounded p-1 text-ink-muted hover:bg-neutral-100 hover:text-ink" aria-label="Editar juros de mora">
+                        <IconEdit size={14} />
+                      </button>
+                    </dd>
+                  )}
                 </div>
+
                 <div className="flex items-center justify-between gap-4">
                   <dt className="flex items-center gap-2.5 text-sm font-medium text-ink">
                     <IconPercent size={15} className="text-steel-400" />
                     Multa
                   </dt>
-                  <dd className="num flex items-center gap-3 font-mono text-sm text-ink">
-                    {PARAMETROS_ENCARGOS.multa.descricao}
-                    {multaConfirmada ? (
-                      <span className="rounded-sm border border-success-border bg-success-bg px-2 py-0.5 font-mono text-xs font-medium text-success-fg">
-                        Confirmado
-                      </span>
-                    ) : (
-                      <span className="rounded-sm border border-warning-border bg-warning-bg px-2 py-0.5 font-mono text-xs font-medium text-warning-fg">
-                        A confirmar
-                      </span>
-                    )}
-                  </dd>
+                  {editando === 'multa' ? (
+                    <dd className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={valorMulta}
+                          onChange={(e) => setValorMulta(e.target.value)}
+                          className="w-20"
+                          autoFocus
+                        />
+                        <span className="text-sm text-ink-muted">% s/ original</span>
+                      </div>
+                      <button type="button" onClick={() => salvar('multa')} className="rounded p-1 text-success-fg hover:bg-success-bg" aria-label="Confirmar">
+                        <IconCheck size={15} />
+                      </button>
+                      <button type="button" onClick={() => setEditando(null)} className="rounded p-1 text-ink-muted hover:bg-neutral-100" aria-label="Cancelar">
+                        <IconX size={15} />
+                      </button>
+                    </dd>
+                  ) : (
+                    <dd className="num flex items-center gap-3 font-mono text-sm text-ink">
+                      {descMulta}
+                      <button type="button" onClick={() => setEditando('multa')} className="rounded p-1 text-ink-muted hover:bg-neutral-100 hover:text-ink" aria-label="Editar multa">
+                        <IconEdit size={14} />
+                      </button>
+                    </dd>
+                  )}
                 </div>
               </dl>
-
-              {!multaConfirmada && (
-                <Alert kind="warning" title="Parâmetro pendente de confirmação do cliente.">
-                  O percentual da multa ({PARAMETROS_ENCARGOS.multa.descricao}) ainda não foi
-                  fechado com a Fernanda. Os cálculos usam o valor provisório.
-                </Alert>
-              )}
-
-              <label className="flex items-center justify-between gap-3 text-xs text-ink-muted">
-                Percentual da multa confirmado com o cliente
-                <Switch
-                  checked={multaConfirmada}
-                  onChange={(v) => {
-                    setMultaConfirmada(v)
-                    toast(v ? 'Multa marcada como confirmada.' : 'Multa marcada como pendente.')
-                  }}
-                  aria-label="Percentual da multa confirmado com o cliente"
-                />
-              </label>
             </Card.Body>
           </Card>
 
