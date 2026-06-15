@@ -743,10 +743,10 @@ export const kpis = computarKpis('grupo')
 // crescendo = carteira envelhecendo (menor probabilidade de recuperação).
 
 export const FAIXAS_AGING = [
-  'Atraso operacional',
-  'Alerta de risco',
-  'Inadimplência geral',
-  'Inadimplência crítica',
+  'Atraso operacional · 1–5 dias',
+  'Alerta de risco · 6–15 dias',
+  'Inadimplência geral · 16–29 dias',
+  'Inadimplência crítica · 30+ dias',
 ] as const
 
 // dias de atraso [min, max|null] por índice de faixa — null = sem limite superior
