@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design System v5 · Cobrança RF — Retífica Formiguense</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* ===== COR · Marca / atenção (laranja Retífica) ===== */
+  /* Papel: foco, links, indicador ativo, destaque de atenção. NUNCA fill de botão, NUNCA severidade. */
+  --color-primary-50:#FEF3EC; --color-primary-100:#FDE2D2; --color-primary-200:#FBC9A8;
+  --color-primary-300:#F9A574; --color-primary-400:#F8853F; --color-primary-500:#F76C31;
+  --color-primary-600:#E35E22; --color-primary-700:#B8460F; --color-primary-800:#973A0C; --color-primary-900:#6E2A09;
+
+  /* ===== COR · Aço (estrutura + AÇÃO) ===== */
+  --color-secondary-50:#EEF1F1; --color-secondary-100:#DCE2E2; --color-secondary-200:#BCC8C8;
+  --color-secondary-300:#8FA1A1; --color-secondary-400:#5C7173; --color-secondary-500:#34474A;
+  --color-secondary-600:#2A3A3C; --color-secondary-700:#212E30; --color-secondary-800:#1A2426; --color-secondary-900:#0F1718;
+
+  /* ===== COR · Neutros ===== */
+  --color-neutral-0:#FFFFFF; --color-neutral-50:#F7F8F2; --color-neutral-100:#EFF1EA;
+  --color-neutral-200:#E5E8E1; --color-neutral-300:#D3D8CF; --color-neutral-400:#AEB6AF;
+  --color-neutral-500:#79847F; --color-neutral-600:#5A6562; --color-neutral-700:#46524F;
+  --color-neutral-800:#2C3634; --color-neutral-900:#1A2625; --color-neutral-950:#0F1716;
+
+  /* ===== COR · Régua de severidade financeira (famílias completas) =====
+     Cada status tem 4 tokens: base (dot/barra), bg, border, fg (texto AA sobre bg). */
+  --status-pago-base:#0E895D;        --status-pago-bg:#E4F3EA;        --status-pago-border:#BCE3CD;        --status-pago-fg:#0B6B49;
+  --status-avencer-base:#5C7173;     --status-avencer-bg:#EFF1EA;     --status-avencer-border:#E5E8E1;     --status-avencer-fg:#46524F;
+  --status-hoje-base:#C7921F;        --status-hoje-bg:#FBF1DA;        --status-hoje-border:#F2DCA8;        --status-hoje-fg:#8A5C0A;
+  --status-atrasado-base:#C8342A;    --status-atrasado-bg:#FBE7E4;    --status-atrasado-border:#F2C2BC;    --status-atrasado-fg:#A82A21;
+  --status-inadimplente-base:#9E1B14;--status-inadimplente-bg:#F6DDD9;--status-inadimplente-border:#E6ADA5;--status-inadimplente-fg:#7E1810;
+
+  /* ===== COR · Semântica de sistema (aliases — fonte única) =====
+     Sucesso/aviso/erro reutilizam as famílias de status. A FORMA (alert vs badge) distingue
+     "falha de sistema" de "estado financeiro" — não uma segunda escala de vermelhos. */
+  --color-success:var(--status-pago-base);   --color-success-bg:var(--status-pago-bg);   --color-success-border:var(--status-pago-border);   --color-success-fg:var(--status-pago-fg);
+  --color-warning:var(--status-hoje-base);   --color-warning-bg:var(--status-hoje-bg);   --color-warning-border:var(--status-hoje-border);   --color-warning-fg:var(--status-hoje-fg);
+  --color-error:var(--status-atrasado-base); --color-error-bg:var(--status-atrasado-bg); --color-error-border:var(--status-atrasado-border); --color-error-fg:var(--status-atrasado-fg);
+  --color-info:#1F5C8B; --color-info-bg:#E5F0F8; --color-info-border:#BBD8EC; --color-info-fg:#1A4E76;
+
+  /* ===== COR · Ação e acento ===== */
+  --color-action:var(--color-secondary-500);        /* botão primário */
+  --color-action-hover:var(--color-secondary-600);
+  --color-action-active:var(--color-secondary-700);
+  --color-accent:var(--color-primary-500);          /* atenção: foco, indicador ativo */
+  --color-link:var(--color-primary-700);            /* links e botão ghost: AA sobre branco */
+
+  /* ===== Aliases de superfície (tema único: claro) ===== */
+  --color-bg:var(--color-neutral-50); --color-surface:var(--color-neutral-0);
+  --color-border:var(--color-neutral-200); --color-border-strong:var(--color-neutral-300);
+  --color-text:var(--color-neutral-900); --color-text-muted:var(--color-neutral-500);
+  --color-text-inverse:var(--color-neutral-0);
+
+  /* ===== TIPOGRAFIA ===== */
+  --font-display:'IBM Plex Serif',Georgia,serif;
+  --font-body:'IBM Plex Sans',system-ui,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+  /* Piso de 11px: produto operado por horas. Escala 1.25 a partir de 16. */
+  --text-xs:0.6875rem;  /* 11px — rótulos mono, metadados */
+  --text-sm:0.8125rem;  /* 13px — apoio, badges, helper */
+  --text-base:1rem;     /* 16px */
+  --text-lg:1.25rem;    /* 20px */
+  --text-xl:1.5625rem;  /* 25px */
+  --text-2xl:1.9375rem; /* 31px */
+  --text-3xl:2.4375rem; /* 39px */
+  --text-4xl:3.0625rem; /* 49px */
+  --text-5xl:3.8125rem; /* 61px */
+  --weight-regular:400; --weight-medium:500; --weight-semibold:600; --weight-bold:700;
+  --leading-tight:1.15; --leading-snug:1.375; --leading-normal:1.5; --leading-relaxed:1.625;
+  --tracking-tight:-0.025em; --tracking-normal:0; --tracking-wide:0.05em; --tracking-widest:0.14em;
+
+  /* ===== ESPAÇO (base 4px) ===== */
+  --space-1:0.25rem; --space-2:0.5rem; --space-3:0.75rem; --space-4:1rem; --space-5:1.25rem;
+  --space-6:1.5rem; --space-8:2rem; --space-10:2.5rem; --space-12:3rem; --space-16:4rem; --space-20:5rem;
+
+  /* ===== LAYOUT ===== */
+  --nav-width:232px;            /* nav lateral fixa em px, não em colunas */
+  --table-row-h:44px;           /* linha padrão */
+  --table-row-h-dense:36px;     /* modo denso */
+
+  /* ===== FORMA / ELEVAÇÃO ===== */
+  --radius-sm:0.25rem; --radius-md:0.5rem; --radius-lg:0.75rem; --radius-xl:1rem; --radius-full:9999px;
+  --shadow-xs:0 1px 2px rgba(16,40,38,.05);
+  --shadow-sm:0 1px 3px rgba(16,40,38,.10),0 1px 2px rgba(16,40,38,.06);
+  --shadow-md:0 4px 10px -2px rgba(16,40,38,.10),0 2px 6px -2px rgba(16,40,38,.06);
+  --shadow-lg:0 12px 24px -6px rgba(16,40,38,.14),0 4px 10px -4px rgba(16,40,38,.08);
+  --shadow-xl:0 24px 48px -12px rgba(16,40,38,.20);
+
+  /* ===== MOVIMENTO ===== */
+  --duration-fast:100ms; --duration-normal:200ms; --duration-slow:300ms; --duration-slower:500ms;
+  --ease-default:cubic-bezier(.4,0,.2,1); --ease-out:cubic-bezier(0,0,.2,1);
+  --ring:0 0 0 3px rgba(247,108,49,.34);
+  --ring-error:0 0 0 3px rgba(200,52,42,.22);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--font-body);background:var(--color-bg);color:var(--color-text);
+  -webkit-font-smoothing:antialiased;line-height:var(--leading-normal);overflow:hidden}
+svg{display:block}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ---------- chrome ---------- */
+#progress-bar{position:fixed;top:0;left:0;height:3px;background:var(--color-accent);z-index:60;
+  width:0;transition:width var(--duration-slow) var(--ease-out)}
+#slide-counter{position:fixed;bottom:22px;left:28px;z-index:60;font-family:var(--font-mono);
+  font-size:var(--text-sm);color:var(--color-text-muted);letter-spacing:.04em}
+#slide-counter b{color:var(--color-link)}
+.nav-btn{position:fixed;bottom:18px;z-index:60;width:38px;height:38px;border-radius:var(--radius-md);
+  border:1px solid var(--color-border-strong);background:var(--color-surface);color:var(--color-neutral-700);
+  cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:var(--duration-fast)}
+.nav-btn:hover{background:var(--color-neutral-100);color:var(--color-text)}
+.nav-btn:focus-visible{outline:none;box-shadow:var(--ring)}
+#nav-prev{right:74px}#nav-next{right:28px}
+.kb-hint{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:60;font-family:var(--font-mono);
+  font-size:var(--text-xs);color:var(--color-neutral-400);letter-spacing:.06em}
+
+/* ---------- slides ---------- */
+#slides-container{width:100vw;height:100vh;overflow:hidden;position:relative}
+.slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  opacity:0;transform:translateX(60px);pointer-events:none;
+  transition:opacity var(--duration-slower) var(--ease-out),transform var(--duration-slower) var(--ease-out)}
+.slide.active{opacity:1;transform:translateX(0);pointer-events:all}
+.slide.exit-left{opacity:0;transform:translateX(-60px)}
+.slide-inner{width:min(1060px,93vw);max-height:88vh;overflow-y:auto;padding:8px 4px}
+.slide-inner::-webkit-scrollbar{width:8px}
+.slide-inner::-webkit-scrollbar-thumb{background:var(--color-neutral-300);border-radius:99px}
+
+/* ---------- type primitives ---------- */
+.eyebrow{font-family:var(--font-mono);font-size:var(--text-xs);font-weight:var(--weight-medium);
+  letter-spacing:var(--tracking-widest);text-transform:uppercase;color:var(--color-link)}
+.s-title{font-family:var(--font-display);font-weight:700;font-size:var(--text-4xl);
+  line-height:var(--leading-tight);letter-spacing:var(--tracking-tight);color:var(--color-text);margin:var(--space-3) 0;font-variant-numeric:lining-nums tabular-nums}
+.s-title .accent{color:var(--color-primary-500)}
+.s-sub{font-size:var(--text-lg);color:var(--color-text-muted);line-height:var(--leading-relaxed);max-width:66ch}
+.lead{font-size:var(--text-base);color:var(--color-neutral-700);line-height:var(--leading-relaxed);max-width:70ch}
+.s-head{margin-bottom:var(--space-8)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-6)}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-4)}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-4)}
+.mono{font-family:var(--font-mono)}
+.stack{display:flex;flex-direction:column;gap:var(--space-4)}
+.row{display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap}
+.num{font-variant-numeric:lining-nums tabular-nums}
+
+/* ---------- COVER ---------- */
+.slide--cover{background:radial-gradient(120% 90% at 85% 10%,#23323333,transparent 60%),var(--color-secondary-800)}
+.cover-inner{width:min(1060px,93vw);color:#fff}
+.cover-wordmark{font-family:var(--font-mono);font-size:var(--text-sm);letter-spacing:.22em;text-transform:uppercase;
+  color:#8fa6a2;margin-bottom:var(--space-10)}
+.cover-wordmark b{color:var(--color-primary-400);font-weight:600}
+.cover-eyebrow{font-family:var(--font-mono);font-size:var(--text-sm);letter-spacing:var(--tracking-widest);
+  text-transform:uppercase;color:var(--color-primary-300)}
+.cover-title{font-family:var(--font-display);font-weight:700;font-size:clamp(3rem,7vw,5.2rem);
+  line-height:1.04;letter-spacing:-.02em;margin:var(--space-5) 0 var(--space-4);font-variant-numeric:lining-nums tabular-nums}
+.cover-title em{font-style:normal;color:var(--color-primary-500)}
+.cover-tag{font-size:var(--text-lg);color:#c7d0cf;max-width:56ch;line-height:var(--leading-relaxed)}
+.cover-meta{margin-top:var(--space-12);display:flex;gap:var(--space-12);border-top:1px solid #ffffff22;padding-top:var(--space-5)}
+.cover-meta div .k{font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:.1em;text-transform:uppercase;color:#7e9692}
+.cover-meta div .v{font-size:var(--text-base);font-weight:var(--weight-semibold);color:#fff;margin-top:4px}
+
+/* ---------- cards genéricos ---------- */
+.tile{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);
+  padding:var(--space-5);box-shadow:var(--shadow-xs)}
+.tile-keyline{border-top:3px solid var(--color-accent)}
+.trait{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-6)}
+.trait h3{font-family:var(--font-display);font-weight:700;font-size:var(--text-2xl);color:var(--color-text);line-height:1.1}
+.trait p{font-size:var(--text-sm);color:var(--color-text-muted);margin-top:var(--space-2);line-height:var(--leading-snug)}
+.trait--hero{background:var(--color-secondary-800);border-color:var(--color-secondary-800)}
+.trait--hero h3{color:#fff}.trait--hero p{color:#a9bcba}
+.trait--hero .badge-mini{color:var(--color-primary-300)}
+.badge-mini{font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--color-link)}
+
+/* ---------- swatches ---------- */
+.ramp{display:grid;grid-template-columns:repeat(10,1fr);border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--color-border)}
+.ramp div{height:46px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;font-family:var(--font-mono);font-size:var(--text-xs)}
+.ramp-label{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-muted);margin:var(--space-4) 0 var(--space-2);letter-spacing:.04em}
+.status-row{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-3);margin-top:var(--space-3)}
+.status-chip{border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden;background:var(--color-surface)}
+.status-chip .bar{height:6px}.status-chip .t{padding:var(--space-3);font-size:var(--text-sm);font-weight:var(--weight-semibold)}
+.status-chip .t span{display:block;font-weight:400;font-size:var(--text-xs);color:var(--color-text-muted);margin-top:2px;font-family:var(--font-mono)}
+.color-rule{margin-top:var(--space-6);background:var(--color-neutral-100);border-radius:var(--radius-lg);padding:var(--space-5) var(--space-6)}
+.rule-title{font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:.1em;text-transform:uppercase;color:var(--color-link);margin-bottom:var(--space-3)}
+.rule-list{list-style:none;display:flex;flex-direction:column;gap:var(--space-2)}
+.rule-list li{display:flex;gap:var(--space-3);align-items:baseline;font-size:var(--text-sm);color:var(--color-neutral-700);line-height:var(--leading-snug)}
+.rule-color{width:12px;height:12px;border-radius:3px;flex-shrink:0;transform:translateY(2px)}
+.rule-list b{color:var(--color-text)}
+.fam-table{width:100%;border-collapse:collapse;font-size:var(--text-xs);font-family:var(--font-mono)}
+.fam-table th{text-align:left;font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);
+  padding:0 var(--space-3) var(--space-2);border-bottom:1px solid var(--color-border-strong);font-weight:500}
+.fam-table td{padding:7px var(--space-3);border-bottom:1px solid var(--color-border);vertical-align:middle;white-space:nowrap}
+.fam-table .sw{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid var(--color-border);vertical-align:middle;margin-right:6px}
+
+/* ---------- typography slide ---------- */
+.type-spec{display:flex;align-items:baseline;gap:var(--space-6);padding:var(--space-3) 0;border-bottom:1px solid var(--color-border)}
+.type-spec .meta{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-muted);width:170px;flex-shrink:0;line-height:1.5}
+.font-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-5)}
+.font-card .nm{font-size:var(--text-xs);font-family:var(--font-mono);color:var(--color-text-muted);letter-spacing:.06em;text-transform:uppercase}
+.font-card .sample{font-size:var(--text-3xl);margin-top:var(--space-2);line-height:1.1}
+.font-card .role{font-size:var(--text-sm);color:var(--color-text-muted);margin-top:var(--space-2)}
+
+/* ---------- formatação de dados ---------- */
+.fmt-table{width:100%;border-collapse:collapse;font-size:var(--text-sm)}
+.fmt-table th{text-align:left;font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--color-text-muted);padding:0 var(--space-3) var(--space-2);border-bottom:1px solid var(--color-border-strong);font-weight:500}
+.fmt-table td{padding:9px var(--space-3);border-bottom:1px solid var(--color-border);vertical-align:top;line-height:var(--leading-snug)}
+.fmt-table td:first-child{font-weight:var(--weight-semibold);color:var(--color-text);white-space:nowrap}
+.fmt-table .ex{font-family:var(--font-mono);white-space:nowrap}
+
+/* ---------- spacing ---------- */
+.space-bar{display:flex;align-items:center;gap:var(--space-4);padding:5px 0}
+.space-bar .b{height:14px;background:var(--color-primary-400);border-radius:2px}
+.space-bar .m{font-family:var(--font-mono);font-size:var(--text-sm);color:var(--color-neutral-700);width:160px}
+.box-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-3)}
+.box{height:76px;background:var(--color-surface);border:1px solid var(--color-border);display:flex;
+  align-items:flex-end;justify-content:center;padding:6px;font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-muted)}
+
+/* ---------- icons ---------- */
+.icon{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.icon-demo{display:flex;gap:var(--space-5);align-items:center;flex-wrap:wrap}
+.icon-demo .ic{color:var(--color-neutral-700)}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font-body);
+  font-size:var(--text-sm);font-weight:var(--weight-semibold);line-height:1;cursor:pointer;
+  border:1px solid transparent;border-radius:var(--radius-md);padding:0 16px;height:40px;
+  transition:background var(--duration-fast),border-color var(--duration-fast),box-shadow var(--duration-fast)}
+.btn:focus-visible{outline:none;box-shadow:var(--ring)}
+.btn .icon{width:16px;height:16px;stroke-width:2}
+.btn-primary{background:var(--color-action);color:var(--color-text-inverse)}
+.btn-primary:hover,.btn-primary.is-hover{background:var(--color-action-hover)}
+.btn-primary:active,.btn-primary.is-active{background:var(--color-action-active)}
+.btn-secondary{background:var(--color-surface);color:var(--color-text);border-color:var(--color-border-strong)}
+.btn-secondary:hover{background:var(--color-neutral-100)}
+.btn-ghost{background:transparent;color:var(--color-link)}
+.btn-ghost:hover{background:var(--color-primary-50)}
+.btn-destructive{background:var(--status-atrasado-base);color:#fff}
+.btn-destructive:hover{background:var(--status-atrasado-fg)}
+.btn[disabled]{opacity:.42;cursor:not-allowed}
+.btn-sm{height:32px;font-size:var(--text-xs);padding:0 12px}
+.btn-lg{height:48px;font-size:var(--text-base);padding:0 22px}
+.btn.is-loading{position:relative;color:transparent;pointer-events:none}
+.btn.is-loading::after{content:"";position:absolute;width:16px;height:16px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite}
+.btn-secondary.is-loading::after,.btn-ghost.is-loading::after{border-color:rgba(0,0,0,.18);border-top-color:var(--color-neutral-700)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* inputs */
+.input-group{display:flex;flex-direction:column;gap:6px;max-width:320px}
+.label{font-size:var(--text-sm);font-weight:var(--weight-semibold);color:var(--color-text)}
+.input{font-family:var(--font-body);font-size:var(--text-base);color:var(--color-text);background:var(--color-surface);
+  border:1px solid var(--color-border-strong);border-radius:var(--radius-md);height:42px;padding:0 12px}
+.input::placeholder{color:var(--color-text-muted)}
+.input:focus,.input.is-focus{outline:none;border-color:var(--color-accent);box-shadow:var(--ring)}
+.input[disabled]{background:var(--color-neutral-100);color:var(--color-text-muted)}
+.input-error{border-color:var(--color-error);box-shadow:var(--ring-error)}
+.helper-text{font-size:var(--text-xs);color:var(--color-text-muted)}
+.error-text{font-size:var(--text-xs);color:var(--color-error-fg);font-weight:var(--weight-medium)}
+
+/* fato Certtus em leitura (padrão display, não input) */
+.fact{display:flex;flex-direction:column;gap:4px;max-width:320px}
+.fact .fact-label{font-size:var(--text-xs);font-family:var(--font-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);display:flex;align-items:center;gap:8px}
+.fact .fact-value{font-family:var(--font-mono);font-size:var(--text-lg);color:var(--color-text);font-variant-numeric:lining-nums tabular-nums}
+
+/* badges / tags */
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:var(--text-sm);font-weight:var(--weight-semibold);
+  padding:3px 10px;border-radius:var(--radius-full);border:1px solid;font-variant-numeric:tabular-nums}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;opacity:.9}
+.badge-pago{color:var(--status-pago-fg);background:var(--status-pago-bg);border-color:var(--status-pago-border)}
+.badge-avencer{color:var(--status-avencer-fg);background:var(--status-avencer-bg);border-color:var(--status-avencer-border)}
+.badge-hoje{color:var(--status-hoje-fg);background:var(--status-hoje-bg);border-color:var(--status-hoje-border)}
+.badge-atrasado{color:var(--status-atrasado-fg);background:var(--status-atrasado-bg);border-color:var(--status-atrasado-border)}
+.badge-inadimplente{color:var(--status-inadimplente-fg);background:var(--status-inadimplente-bg);border-color:var(--status-inadimplente-border)}
+.tag{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:var(--text-xs);font-weight:500;padding:3px 8px;
+  border-radius:var(--radius-sm);background:var(--color-secondary-50);color:var(--color-secondary-600);border:1px solid var(--color-secondary-100)}
+.tag--source{background:var(--color-secondary-50);color:var(--color-secondary-600);border-color:var(--color-secondary-200)}
+.tag--source .icon{width:11px;height:11px;stroke-width:2.2}
+.input-readonly{background:var(--color-neutral-100);border-color:var(--color-border);color:var(--color-neutral-700);cursor:default}
+
+/* estados do processo — quadrado+mono */
+.badge-proc{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:var(--text-xs);
+  font-weight:var(--weight-medium);letter-spacing:.01em;padding:4px 9px;border-radius:var(--radius-sm);border:1px solid}
+.badge-proc::before{content:"";width:6px;height:6px;border-radius:2px;background:currentColor;flex-shrink:0}
+.badge-pausada{color:var(--color-secondary-600);background:var(--color-secondary-50);border-color:var(--color-secondary-200)}
+.badge-aprovacao{color:var(--color-info-fg);background:var(--color-info-bg);border-color:var(--color-info-border)}
+.badge-excecao{color:var(--status-hoje-fg);background:var(--status-hoje-bg);border-color:var(--status-hoje-border)}
+
+/* card componente */
+.card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-sm);overflow:hidden;max-width:380px}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--color-border)}
+.card-title{font-family:var(--font-display);font-weight:600;font-size:var(--text-lg);color:var(--color-text)}
+.card-body{padding:var(--space-5);font-size:var(--text-sm);color:var(--color-neutral-700);line-height:var(--leading-relaxed)}
+.card-footer{display:flex;gap:var(--space-2);justify-content:flex-end;padding:var(--space-4) var(--space-5);border-top:1px solid var(--color-border);background:var(--color-neutral-50)}
+
+/* modal preview */
+.modal-prev{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);
+  box-shadow:var(--shadow-xl);padding:var(--space-6);max-width:380px}
+.modal-prev h4{font-family:var(--font-display);font-weight:700;font-size:var(--text-xl)}
+.modal-prev p{font-size:var(--text-sm);color:var(--color-neutral-700);margin:var(--space-2) 0 var(--space-5);line-height:var(--leading-relaxed)}
+
+/* nav item — ativo = barra laranja + texto branco (não fill) */
+.navitem-demo{background:var(--color-secondary-800);border-radius:var(--radius-lg);padding:var(--space-3);width:232px}
+.navitem{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-md);color:#bcccca;
+  font-size:var(--text-sm);font-weight:500;position:relative}
+.navitem .icon{width:17px;height:17px}
+.navitem.on{background:#ffffff10;color:#fff}
+.navitem.on::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:2px;background:var(--color-accent)}
+.navitem:not(.on):hover{background:#ffffff0c;color:#fff}
+
+/* alerts / toast */
+.alert{display:flex;gap:12px;border:1px solid;border-radius:var(--radius-md);padding:var(--space-4) var(--space-5);
+  font-size:var(--text-sm);line-height:var(--leading-snug);align-items:flex-start;max-width:460px}
+.alert .icon{width:18px;height:18px;flex-shrink:0;margin-top:1px}
+.alert strong{display:block;font-weight:var(--weight-semibold)}
+.alert-success{background:var(--color-success-bg);border-color:var(--color-success-border);color:var(--color-success-fg)}
+.alert-warning{background:var(--color-warning-bg);border-color:var(--color-warning-border);color:var(--color-warning-fg)}
+.alert-error{background:var(--color-error-bg);border-color:var(--color-error-border);color:var(--color-error-fg)}
+.alert-info{background:var(--color-info-bg);border-color:var(--color-info-border);color:var(--color-info-fg)}
+.toast{display:flex;align-items:center;gap:10px;background:var(--color-secondary-800);color:#fff;
+  border-radius:var(--radius-md);padding:12px 16px;box-shadow:var(--shadow-lg);font-size:var(--text-sm);max-width:360px}
+.toast .icon{width:16px;height:16px;color:#7be3b6}
+.empty{border:1px dashed var(--color-border-strong);border-radius:var(--radius-lg);padding:var(--space-8);
+  text-align:center;color:var(--color-text-muted);max-width:420px;background:var(--color-neutral-50)}
+.empty .icon{width:28px;height:28px;margin:0 auto var(--space-3);color:var(--color-neutral-400)}
+.empty h4{font-family:var(--font-display);font-weight:600;font-size:var(--text-lg);color:var(--color-neutral-700)}
+.empty p{font-size:var(--text-sm);margin-top:4px}
+.skeleton{height:14px;border-radius:var(--radius-sm);background:linear-gradient(90deg,var(--color-neutral-100),var(--color-neutral-200),var(--color-neutral-100));
+  background-size:200% 100%;animation:sk 1.4s linear infinite}
+@keyframes sk{to{background-position:-200% 0}}
+
+/* component block + rules */
+.component-block{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);
+  padding:var(--space-5);display:flex;flex-direction:column;gap:var(--space-4)}
+.component-preview{display:flex;gap:var(--space-3);flex-wrap:wrap;align-items:center}
+.component-rules{display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--color-border);padding-top:var(--space-3)}
+.rule-do,.rule-dont{font-size:var(--text-xs);line-height:var(--leading-snug);display:flex;gap:7px}
+.rule-do{color:var(--color-success-fg)} .rule-dont{color:var(--color-error-fg)}
+.cmp-name{font-family:var(--font-display);font-weight:600;font-size:var(--text-lg)}
+
+/* ---------- TABELA (componente protagonista) ---------- */
+.dtable{width:100%;border-collapse:collapse;background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-lg);overflow:hidden;font-size:var(--text-sm)}
+.dtable thead th{font-family:var(--font-mono);font-size:var(--text-xs);font-weight:500;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--color-text-muted);text-align:left;padding:0 var(--space-4);
+  height:38px;background:var(--color-neutral-50);border-bottom:1px solid var(--color-border-strong);white-space:nowrap}
+.dtable thead th .icon{width:11px;height:11px;display:inline-block;vertical-align:-1px;margin-left:4px}
+.dtable tbody td{padding:0 var(--space-4);height:var(--table-row-h);border-bottom:1px solid var(--color-border);vertical-align:middle}
+.dtable tbody tr:last-child td{border-bottom:none}
+.dtable tbody tr:hover{background:var(--color-neutral-50)}
+.dtable tbody tr.is-selected{background:var(--color-secondary-50)}
+.dtable .td-num{font-family:var(--font-mono);text-align:right;font-variant-numeric:lining-nums tabular-nums;white-space:nowrap}
+.dtable th.th-num{text-align:right}
+.dtable .td-id{font-family:var(--font-mono);color:var(--color-neutral-700);white-space:nowrap}
+.dtable .td-name{font-weight:var(--weight-medium);color:var(--color-text)}
+.sort-on{color:var(--color-link)}
+
+/* voice */
+.voice-card{background:var(--color-surface);border:1px solid var(--color-border);border-left:3px solid var(--color-accent);
+  border-radius:var(--radius-md);padding:var(--space-4) var(--space-5)}
+.voice-adjective{font-family:var(--font-display);font-weight:700;font-size:var(--text-xl)}
+.voice-desc{font-size:var(--text-sm);color:var(--color-text-muted);margin-top:3px;line-height:var(--leading-snug)}
+.voice-state{font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:6px}
+
+/* glossário */
+.glossary-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-5)}
+.glossary-term{font-family:var(--font-display);font-weight:700;font-size:var(--text-xl);color:var(--color-text)}
+.glossary-deprecated{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-error-fg);margin-top:4px}
+.glossary-def{font-size:var(--text-sm);color:var(--color-neutral-700);margin-top:var(--space-3);line-height:var(--leading-snug)}
+
+/* screen anatomy */
+.anatomy-frame{border:1px solid var(--color-border-strong);border-radius:var(--radius-md);overflow:hidden;background:var(--color-neutral-50);height:200px;display:flex}
+.anatomy-region{display:flex;align-items:center;justify-content:center;border:1px dashed var(--color-secondary-300)}
+.region-label{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-secondary-500);letter-spacing:.04em;text-align:center;padding:4px}
+.an-side{width:26%;background:var(--color-secondary-50);flex-direction:column}
+.an-main{flex:1;display:flex;flex-direction:column}
+.an-top{height:40px;background:var(--color-primary-50);border-bottom:1px dashed var(--color-secondary-300)}
+.an-body{flex:1}
+.anatomy-rules{list-style:none;display:flex;flex-direction:column;gap:7px;margin-top:var(--space-4)}
+.anatomy-rules li{font-size:var(--text-xs);color:var(--color-neutral-700);line-height:var(--leading-snug);padding-left:14px;position:relative}
+.anatomy-rules li::before{content:"";position:absolute;left:0;top:6px;width:5px;height:5px;border-radius:50%;background:var(--color-accent)}
+
+/* token table */
+.token-table{width:100%;border-collapse:collapse;font-size:var(--text-xs)}
+.token-table th{text-align:left;font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--color-text-muted);padding:0 var(--space-3) var(--space-2);border-bottom:1px solid var(--color-border-strong);font-weight:500}
+.token-table td{padding:7px var(--space-3);border-bottom:1px solid var(--color-border);vertical-align:middle}
+.token-table td:first-child{font-family:var(--font-mono);color:var(--color-link);white-space:nowrap}
+.token-table .sw{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid var(--color-border);vertical-align:middle;margin-right:6px}
+.cols-2{column-count:2;column-gap:var(--space-8)}
+
+/* do/dont */
+.dd-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-5)}
+.dd{border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;background:var(--color-surface)}
+.dd-head{padding:var(--space-3) var(--space-4);font-family:var(--font-mono);font-size:var(--text-xs);
+  letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.dd-do .dd-head{background:var(--color-success-bg);color:var(--color-success-fg)}
+.dd-dont .dd-head{background:var(--color-error-bg);color:var(--color-error-fg)}
+.dd-body{padding:var(--space-5);display:flex;flex-direction:column;gap:var(--space-3);min-height:130px;justify-content:center}
+.dd-note{font-size:var(--text-xs);color:var(--color-text-muted);line-height:var(--leading-snug)}
+
+/* pendências */
+.pend{border:1px solid var(--status-hoje-border);background:var(--status-hoje-bg);border-radius:var(--radius-lg);padding:var(--space-5)}
+.pend h4{font-family:var(--font-display);font-weight:700;font-size:var(--text-lg);color:var(--status-hoje-fg)}
+.pend ul{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:var(--space-3)}
+.pend li{font-size:var(--text-sm);color:var(--color-neutral-800);line-height:var(--leading-snug);padding-left:14px;position:relative}
+.pend li::before{content:"";position:absolute;left:0;top:7px;width:5px;height:5px;border-radius:50%;background:var(--status-hoje-base)}
+
+@media print{
+  body{overflow:visible}.slide{position:relative;opacity:1!important;transform:none!important;page-break-after:always;height:100vh}
+  #progress-bar,#slide-counter,.nav-btn,.kb-hint{display:none!important}
+}
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+<div id="slides-container">
+  <!-- 01 · COVER -->
+  <section class="slide slide--cover active">
+    <div class="cover-inner">
+      <div class="cover-wordmark"><b>Retífica Formiguense</b> &nbsp;×&nbsp; Origami Lab</div>
+      <div class="cover-eyebrow">Design System · v5 · junho 2026</div>
+      <h1 class="cover-title">Cobrança<br><em>RF</em></h1>
+      <p class="cover-tag">O sistema de design do Cobrança RF — a plataforma de cobrança da Retífica Formiguense. A visão única e acionável do financeiro: sóbria, precisa, confiável.</p>
+      <div class="cover-meta">
+        <div><div class="k">Produto</div><div class="v">Cobrança RF</div></div>
+        <div><div class="k">Plataforma</div><div class="v">Web · desktop · tema claro</div></div>
+        <div><div class="k">Ação primária</div><div class="v">Aço #34474A</div></div>
+        <div><div class="k">Acento de atenção</div><div class="v">Laranja #F76C31</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 · BRAND FOUNDATION -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">02 · Fundação da marca</div>
+        <h2 class="s-title">O dado é o <span class="accent">herói.</span></h2>
+        <p class="s-sub">A plataforma existe para o financeiro decidir a partir de uma visão única e acionável. Tudo no design serve a essa clareza: precisão visível, zero ornamento, frescor do dado sempre à vista.</p>
+      </div>
+      <div class="grid-3" style="margin-bottom:var(--space-6)">
+        <div class="trait"><div class="badge-mini">Personalidade</div><h3>Confiável</h3><p>O número está certo. Sempre. Sem asterisco.</p></div>
+        <div class="trait"><div class="badge-mini">Personalidade</div><h3>Eficiente</h3><p>Menos cliques, menos conferência manual, mais decisão.</p></div>
+        <div class="trait trait--hero"><div class="badge-mini">Personalidade</div><h3>Dona do<br>processo</h3><p>Autoridade sobre a régua, as notificações e a visão consolidada. Os fatos financeiros seguem no Certtus — fonte da verdade.</p></div>
+      </div>
+      <div class="grid-2">
+        <div class="tile tile-keyline">
+          <div class="eyebrow" style="margin-bottom:var(--space-2)">Emoção-alvo</div>
+          <p class="lead" style="font-size:var(--text-sm)">No <b>controle</b>, <b>aliviada por confiar no dado</b> e <b>respaldada perante a diretoria</b> — que lê os números sem operar a ferramenta.</p>
+        </div>
+        <div class="tile">
+          <div class="eyebrow" style="margin-bottom:var(--space-2)">Princípio · fonte dos dados</div>
+          <p class="lead" style="font-size:var(--text-sm)">O <b>Certtus</b> é a fonte dos fatos financeiros (faturado, pago, cliente). O Cobrança RF é dono do <b>processo de cobrança</b> e da visão acionável — consulta, nunca cria verdade paralela.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 · PAPÉIS DA COR -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">03 · Sistema de cores · papéis</div>
+        <h2 class="s-title">Aço age. Laranja <span class="accent">aponta.</span></h2>
+        <p class="s-sub">Três papéis sem sobreposição: o aço executa (botões, estrutura), o laranja chama atenção (foco, links, indicador ativo) e a régua de severidade informa estado financeiro. O laranja nunca preenche botão — preservado para sinalizar, ele nunca compete com o âmbar de "vence hoje" nem com o vermelho de "atrasado".</p>
+      </div>
+      <div class="ramp-label">Laranja — atenção (foco, link, indicador ativo). Texto/link usa o tom 700.</div>
+      <div class="ramp">
+        <div style="background:var(--color-primary-50);color:#6E2A09">50</div><div style="background:var(--color-primary-100);color:#6E2A09">100</div><div style="background:var(--color-primary-200);color:#6E2A09">200</div><div style="background:var(--color-primary-300);color:#6E2A09">300</div><div style="background:var(--color-primary-400);color:#fff">400</div><div style="background:var(--color-primary-500);color:#2A1206">500</div><div style="background:var(--color-primary-600);color:#fff">600</div><div style="background:var(--color-primary-700);color:#fff">700</div><div style="background:var(--color-primary-800);color:#fff">800</div><div style="background:var(--color-primary-900);color:#fff">900</div>
+      </div>
+      <div class="ramp-label">Aço — ação e estrutura (botão primário no 500, nav no 800). Neutros: texto, superfícies, linhas.</div>
+      <div class="ramp" style="margin-bottom:var(--space-2)">
+        <div style="background:var(--color-secondary-50)">50</div><div style="background:var(--color-secondary-100)">100</div><div style="background:var(--color-secondary-200)">200</div><div style="background:var(--color-secondary-300)">300</div><div style="background:var(--color-secondary-400);color:#fff">400</div><div style="background:var(--color-secondary-500);color:#fff">500</div><div style="background:var(--color-secondary-600);color:#fff">600</div><div style="background:var(--color-secondary-700);color:#fff">700</div><div style="background:var(--color-secondary-800);color:#fff">800</div><div style="background:var(--color-secondary-900);color:#fff">900</div>
+      </div>
+      <div class="color-rule">
+        <div class="rule-title">Regra de ouro</div>
+        <ul class="rule-list">
+          <li><span class="rule-color" style="background:var(--color-action)"></span><b>Aço (ação)</b> — botão primário, nav, estrutura. A ação é neutra: executar não é alarmar.</li>
+          <li><span class="rule-color" style="background:var(--color-accent)"></span><b>Laranja (atenção)</b> — foco de teclado, links, indicador de item ativo, destaque pontual. Nunca fill de botão, nunca estado financeiro.</li>
+          <li><span class="rule-color" style="background:var(--status-atrasado-base)"></span><b>Vermelho</b> — um só (#C8342A): erro de sistema, ação destrutiva e "atrasado". A forma (alert vs badge) distingue o contexto.</li>
+          <li><span class="rule-color" style="background:var(--status-pago-base)"></span><b>Verde</b> — somente "pago" e confirmações. Não é cor de marca.</li>
+          <li><span class="rule-color" style="background:var(--status-inadimplente-base)"></span><b>Vinho</b> — somente "inadimplente", o nível mais crítico da régua.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 · SEVERIDADE FINANCEIRA -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">04 · Severidade financeira</div>
+        <h2 class="s-title">Cinco estados, <span class="accent">quatro tokens cada.</span></h2>
+        <p class="s-sub">Cada status é uma família: <span class="mono">base</span> (dot/barra), <span class="mono">bg</span>, <span class="mono">border</span> e <span class="mono">fg</span> (texto, contraste AA sobre o bg). Nenhum hex solto em componente — quem precisa do fundo de "atrasado" usa o token, não inventa.</p>
+      </div>
+      <div class="status-row" style="margin-bottom:var(--space-5)">
+        <div class="status-chip"><div class="bar" style="background:var(--status-pago-base)"></div><div class="t">Pago<span>recebido</span></div></div>
+        <div class="status-chip"><div class="bar" style="background:var(--status-avencer-base)"></div><div class="t">A vencer<span>até D-1</span></div></div>
+        <div class="status-chip"><div class="bar" style="background:var(--status-hoje-base)"></div><div class="t">Vence hoje<span>D0</span></div></div>
+        <div class="status-chip"><div class="bar" style="background:var(--status-atrasado-base)"></div><div class="t">Atrasado<span>D+1 … D+29</span></div></div>
+        <div class="status-chip"><div class="bar" style="background:var(--status-inadimplente-base)"></div><div class="t">Inadimplente<span>≥ D+30 *</span></div></div>
+      </div>
+      <table class="fam-table" style="margin-bottom:var(--space-5)">
+        <thead><tr><th>Família</th><th>base</th><th>bg</th><th>border</th><th>fg</th></tr></thead>
+        <tr><td>--status-pago-*</td><td><span class="sw" style="background:var(--status-pago-base)"></span>#0E895D</td><td><span class="sw" style="background:var(--status-pago-bg)"></span>#E4F3EA</td><td><span class="sw" style="background:var(--status-pago-border)"></span>#BCE3CD</td><td><span class="sw" style="background:var(--status-pago-fg)"></span>#0B6B49</td></tr>
+        <tr><td>--status-avencer-*</td><td><span class="sw" style="background:var(--status-avencer-base)"></span>#5C7173</td><td><span class="sw" style="background:var(--status-avencer-bg)"></span>#EFF1EA</td><td><span class="sw" style="background:var(--status-avencer-border)"></span>#E5E8E1</td><td><span class="sw" style="background:var(--status-avencer-fg)"></span>#46524F</td></tr>
+        <tr><td>--status-hoje-*</td><td><span class="sw" style="background:var(--status-hoje-base)"></span>#C7921F</td><td><span class="sw" style="background:var(--status-hoje-bg)"></span>#FBF1DA</td><td><span class="sw" style="background:var(--status-hoje-border)"></span>#F2DCA8</td><td><span class="sw" style="background:var(--status-hoje-fg)"></span>#8A5C0A</td></tr>
+        <tr><td>--status-atrasado-*</td><td><span class="sw" style="background:var(--status-atrasado-base)"></span>#C8342A</td><td><span class="sw" style="background:var(--status-atrasado-bg)"></span>#FBE7E4</td><td><span class="sw" style="background:var(--status-atrasado-border)"></span>#F2C2BC</td><td><span class="sw" style="background:var(--status-atrasado-fg)"></span>#A82A21</td></tr>
+        <tr><td>--status-inadimplente-*</td><td><span class="sw" style="background:var(--status-inadimplente-base)"></span>#9E1B14</td><td><span class="sw" style="background:var(--status-inadimplente-bg)"></span>#F6DDD9</td><td><span class="sw" style="background:var(--status-inadimplente-border)"></span>#E6ADA5</td><td><span class="sw" style="background:var(--status-inadimplente-fg)"></span>#7E1810</td></tr>
+      </table>
+      <div class="grid-2">
+        <div class="tile">
+          <div class="eyebrow" style="margin-bottom:var(--space-2)">Semântica de sistema = alias</div>
+          <p class="lead" style="font-size:var(--text-sm)"><span class="mono">--color-success/warning/error</span> apontam para as famílias pago/hoje/atrasado. Um vermelho só — a forma (alert fixo vs badge pílula) distingue falha de sistema de estado financeiro. <span class="mono">--color-info</span> (#1F5C8B) é o único eixo próprio.</p>
+        </div>
+        <div class="pend" style="padding:var(--space-4) var(--space-5)">
+          <h4 style="font-size:var(--text-base)">* Corte atrasado → inadimplente</h4>
+          <p class="lead" style="font-size:var(--text-sm);margin-top:6px;color:var(--color-neutral-800)">Proposta: <b>≥ D+30</b>, alinhada ao marco "atraso relevante" da Régua de Cobrança. <b>Pendente de confirmação com a RF</b> — não implementar como definitivo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 · TIPOGRAFIA -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">05 · Tipografia</div>
+        <h2 class="s-title">Serifa que <span class="accent">afirma.</span></h2>
+        <p class="s-sub">IBM Plex Serif nos títulos e KPIs, Plex Sans no corpo, Plex Mono em todo dado (valor, data, ID). Piso de 11px — a plataforma é operada por horas. Algarismos sempre <span class="mono">lining + tabular</span> em contexto numérico.</p>
+      </div>
+      <div class="grid-3" style="margin-bottom:var(--space-6)">
+        <div class="font-card"><div class="nm">Display</div><div class="sample" style="font-family:var(--font-display);font-weight:700;font-variant-numeric:lining-nums tabular-nums">Plex Serif 1234</div><div class="role">Títulos, KPIs, capa. Peso e autoridade.</div></div>
+        <div class="font-card"><div class="nm">Corpo</div><div class="sample" style="font-family:var(--font-body);font-weight:600">IBM Plex Sans</div><div class="role">Interface e textos. Leitura limpa.</div></div>
+        <div class="font-card"><div class="nm">Mono</div><div class="sample" style="font-family:var(--font-mono);font-weight:500">Plex Mono</div><div class="role">Valores, datas, IDs, nº de boleto e NF.</div></div>
+      </div>
+      <div>
+        <div class="type-spec"><span class="meta">5xl · 61px · Serif 700</span><span class="num" style="font-family:var(--font-display);font-weight:700;font-size:var(--text-5xl);line-height:1">R$ 48.920,00</span></div>
+        <div class="type-spec"><span class="meta">3xl · 39px · Serif 700</span><span style="font-family:var(--font-display);font-weight:700;font-size:var(--text-3xl)">Painel de inadimplência</span></div>
+        <div class="type-spec"><span class="meta">xl · 25px · Sans 600</span><span style="font-family:var(--font-body);font-weight:600;font-size:var(--text-xl)">Régua de cobrança · Auto Center</span></div>
+        <div class="type-spec"><span class="meta">base · 16px · Sans 400</span><span style="font-size:var(--text-base)">Notificação enviada ao cliente no vencimento.</span></div>
+        <div class="type-spec"><span class="meta">sm · 13px · Sans 400</span><span style="font-size:var(--text-sm)">Texto de apoio, badges e metadados da interface.</span></div>
+        <div class="type-spec"><span class="meta">xs · 11px · Mono 500</span><span style="font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:.06em;text-transform:uppercase">Rótulos de coluna · eyebrows · tags</span></div>
+        <div class="type-spec"><span class="meta">mono · tabular</span><span class="num" style="font-family:var(--font-mono);font-size:var(--text-base)">NF 0008431 · R$ 1.284,90 · 12/06/2026</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 · DADOS & FORMATAÇÃO -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">06 · Dados & formatação</div>
+        <h2 class="s-title">Um jeito de escrever <span class="accent">cada dado.</span></h2>
+        <p class="s-sub">Formatação é parte do design system. O mesmo valor escrito de dois jeitos é meio caminho para a planilha paralela voltar.</p>
+      </div>
+      <table class="fmt-table">
+        <thead><tr><th>Dado</th><th>Regra</th><th>Exemplo</th></tr></thead>
+        <tr><td>Moeda</td><td>pt-BR, sempre 2 decimais, mono em tabela, serif em KPI. Sem abreviação no operacional; "R$ 48,9 mil" só em KPI de dashboard, com o valor exato em tooltip.</td><td class="ex num">R$ 1.284,90</td></tr>
+        <tr><td>Data</td><td><span class="mono">dd/mm/aaaa</span>. Em coluna densa, <span class="mono">dd/mm</span> apenas quando o ano é o corrente.</td><td class="ex num">12/06/2026</td></tr>
+        <tr><td>Tempo relativo</td><td>"há X min" até 60 min; depois "hoje 14:32"; depois data. Usado na sincronização Certtus — o frescor sustenta a autoridade.</td><td class="ex">há 12 min</td></tr>
+        <tr><td>Dias de atraso</td><td>Inteiro + "dias", junto ao badge de status. Singular aos 1 dia.</td><td class="ex num">7 dias</td></tr>
+        <tr><td>Identificadores</td><td>Nº de boleto, NF e título sempre em mono, com prefixo do tipo, zeros preservados.</td><td class="ex num">NF 0008431</td></tr>
+        <tr><td>Alinhamento</td><td>Números e datas à direita (mono tabular); texto à esquerda; badge à esquerda na coluna de status.</td><td class="ex">—</td></tr>
+        <tr><td>Vazio / nulo</td><td>Travessão "—", nunca "0,00" quando o dado não existe. Zero verdadeiro é escrito por extenso numérico.</td><td class="ex">—</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- 07 · ESPAÇAMENTO & GRID -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">07 · Espaçamento & grid</div>
+        <h2 class="s-title">Ritmo de <span class="accent">4 pixels.</span></h2>
+        <p class="s-sub">Toda medida deriva da base 4px. Escala completa: 1–20 (4 a 80px). Densidade de dados sem caos — peças do mesmo módulo sempre encaixam.</p>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="ramp-label">Escala de espaçamento (completa)</div>
+          <div class="space-bar"><span class="m">--space-1 · 4px</span><span class="b" style="width:4px"></span></div>
+          <div class="space-bar"><span class="m">--space-2 · 8px</span><span class="b" style="width:8px"></span></div>
+          <div class="space-bar"><span class="m">--space-3 · 12px</span><span class="b" style="width:12px"></span></div>
+          <div class="space-bar"><span class="m">--space-4 · 16px</span><span class="b" style="width:16px"></span></div>
+          <div class="space-bar"><span class="m">--space-5 · 20px</span><span class="b" style="width:20px"></span></div>
+          <div class="space-bar"><span class="m">--space-6 · 24px</span><span class="b" style="width:24px"></span></div>
+          <div class="space-bar"><span class="m">--space-8 · 32px</span><span class="b" style="width:32px"></span></div>
+          <div class="space-bar"><span class="m">--space-10 · 40px</span><span class="b" style="width:40px"></span></div>
+          <div class="space-bar"><span class="m">--space-12 · 48px</span><span class="b" style="width:48px"></span></div>
+          <div class="space-bar"><span class="m">--space-16 · 64px</span><span class="b" style="width:64px"></span></div>
+        </div>
+        <div>
+          <div class="ramp-label">Layout</div>
+          <div class="tile" style="margin-bottom:var(--space-4)">
+            <div style="display:flex;gap:4px;margin-bottom:var(--space-3)">
+              <span style="width:21%;height:34px;background:var(--color-secondary-100);border-radius:3px"></span>
+              <span style="flex:1;height:34px;background:var(--color-primary-100);border-radius:3px"></span>
+            </div>
+            <p class="lead" style="font-size:var(--text-sm)">Nav lateral <b>fixa em 232px</b> (<span class="mono">--nav-width</span>) + conteúdo fluido em grid de 12 colunas, gutter 16–24px. Nav em px, não em colunas: 4 itens não justificam 25% da tela.</p>
+          </div>
+          <div class="tile">
+            <div class="eyebrow" style="margin-bottom:6px">Breakpoint & tema</div>
+            <p class="lead" style="font-size:var(--text-sm)">Alvo único: <b>desktop ≥ 1280px</b>, <b>tema claro único</b>. Decisões deliberadas: estação de trabalho, uso prolongado, dado denso. Sem responsivo mobile, sem dark mode — nem como token.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 · FORMA & ELEVAÇÃO -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">08 · Forma & elevação</div>
+        <h2 class="s-title">Cantos contidos. <span class="accent">Sombra discreta.</span></h2>
+        <p class="s-sub">Escala enxuta: só raios que componentes realmente usam. Sobriedade, não suavidade decorativa.</p>
+      </div>
+      <div class="ramp-label">Border radius</div>
+      <div class="box-grid" style="margin-bottom:var(--space-6)">
+        <div class="box" style="border-radius:var(--radius-sm)">sm · 4 · tag, skeleton</div>
+        <div class="box" style="border-radius:var(--radius-md)">md · 8 · botão, input</div>
+        <div class="box" style="border-radius:var(--radius-lg)">lg · 12 · card, tabela</div>
+        <div class="box" style="border-radius:var(--radius-xl)">xl · 16 · modal</div>
+        <div class="box" style="border-radius:var(--radius-full)">full · badge pílula</div>
+      </div>
+      <div class="ramp-label">Elevação</div>
+      <div class="grid-4">
+        <div class="box" style="border:none;box-shadow:var(--shadow-xs);border-radius:var(--radius-lg);background:#fff">xs · superfície</div>
+        <div class="box" style="border:none;box-shadow:var(--shadow-sm);border-radius:var(--radius-lg);background:#fff">sm · card</div>
+        <div class="box" style="border:none;box-shadow:var(--shadow-md);border-radius:var(--radius-lg);background:#fff">md · dropdown</div>
+        <div class="box" style="border:none;box-shadow:var(--shadow-xl);border-radius:var(--radius-lg);background:#fff">xl · modal</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 09 · ICONOGRAFIA -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">09 · Iconografia</div>
+        <h2 class="s-title">Lucide, <span class="accent">só outline.</span></h2>
+        <p class="s-sub">Traço fino e neutro. Ícone é sinalização, não ilustração — nunca compete com o dado.</p>
+      </div>
+      <div class="grid-2">
+        <div class="tile">
+          <div class="eyebrow" style="margin-bottom:var(--space-4)">Tamanhos por contexto</div>
+          <div class="icon-demo" style="margin-bottom:var(--space-4)">
+            <span class="ic"><svg class="icon" width="16" height="16" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg></span>
+            <span class="ic"><svg class="icon" width="20" height="20" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 8 9 5 9-5"/></svg></span>
+            <span class="ic"><svg class="icon" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+            <span class="ic"><svg class="icon" width="24" height="24" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg></span>
+          </div>
+          <p class="lead" style="font-size:var(--text-sm)"><b class="mono">16px</b> em linha de tabela · <b class="mono">20px</b> em botões · <b class="mono">24px</b> em nav e títulos de seção. Stroke 2px constante.</p>
+        </div>
+        <div class="tile">
+          <div class="eyebrow" style="margin-bottom:var(--space-3)">Regras</div>
+          <div class="component-rules" style="border:none;padding:0">
+            <div class="rule-do">✓ Outline em todos os contextos, stroke uniforme.</div>
+            <div class="rule-dont">✕ Nunca misturar outline com filled na mesma tela.</div>
+            <div class="rule-dont">✕ Sem emoji como ícone funcional — só Lucide.</div>
+            <div class="rule-dont">✕ Ícone nunca substitui rótulo de texto em ação crítica.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · MOVIMENTO -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">10 · Movimento</div>
+        <h2 class="s-title">Rápido e <span class="accent">sem firula.</span></h2>
+        <p class="s-sub">Animação serve à percepção de resposta, não ao espetáculo. <span class="mono">prefers-reduced-motion</span> é respeitado em tudo.</p>
+      </div>
+      <div class="grid-2">
+        <div class="tile">
+          <div class="eyebrow" style="margin-bottom:var(--space-4)">Durações</div>
+          <table class="token-table">
+            <tr><td>--duration-fast</td><td>100ms</td><td>hover, foco</td></tr>
+            <tr><td>--duration-normal</td><td>200ms</td><td>transições de estado</td></tr>
+            <tr><td>--duration-slow</td><td>300ms</td><td>painéis, dropdowns</td></tr>
+            <tr><td>--duration-slower</td><td>500ms</td><td>troca de tela</td></tr>
+          </table>
+        </div>
+        <div class="tile">
+          <div class="eyebrow" style="margin-bottom:var(--space-4)">Easings & princípios</div>
+          <table class="token-table" style="margin-bottom:var(--space-3)">
+            <tr><td>--ease-default</td><td>(.4,0,.2,1)</td><td>padrão</td></tr>
+            <tr><td>--ease-out</td><td>(0,0,.2,1)</td><td>entradas</td></tr>
+          </table>
+          <p class="lead" style="font-size:var(--text-sm)"><b>Sem bounce, sem spring</b> em ações financeiras — confirmar pagamento não pula. Toda ação de rede mostra progresso (spinner no botão): movimento confirma que algo aconteceu, e some.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 · VOZ & TOM -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">11 · Voz & tom</div>
+        <h2 class="s-title">Autoridade <span class="accent">fala baixo.</span></h2>
+        <p class="s-sub">Direto, factual e sóbrio o tempo todo — inclusive nas conquistas. Sem emoji, sem euforia, sem drama.</p>
+      </div>
+      <div class="grid-2">
+        <div class="stack">
+          <div class="voice-card"><div class="voice-adjective">Direto</div><div class="voice-desc">Diz o que aconteceu e o que fazer. Sem rodeio.</div></div>
+          <div class="voice-card"><div class="voice-adjective">Factual</div><div class="voice-desc">Afirma com dado. Não opina, não suaviza.</div></div>
+          <div class="voice-card"><div class="voice-adjective">Sóbrio</div><div class="voice-desc">Calmo em erro e em sucesso. Nunca comemora.</div></div>
+        </div>
+        <div class="stack">
+          <div><div class="voice-state">Sucesso</div><div class="toast"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Pagamento registrado.</div></div>
+          <div><div class="voice-state">Erro de sistema</div><div class="alert alert-error"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg><div><strong>Não foi possível sincronizar com o Certtus.</strong>Cobranças pausadas até a reconexão.</div></div></div>
+          <div><div class="voice-state">Validação</div><div class="input-group" style="max-width:none"><input class="input input-error" value="35"><span class="error-text">Informe um dia entre 1 e 31.</span></div></div>
+          <div><div class="voice-state">Estado vazio · CTA</div><div class="row"><span class="lead" style="font-size:var(--text-sm)">"Nenhuma cobrança em aberto."</span><button class="btn btn-primary btn-sm">Ativar régua de cobrança</button></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 · GLOSSÁRIO -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">12 · Glossário</div>
+        <h2 class="s-title">Uma palavra por <span class="accent">conceito.</span></h2>
+        <p class="s-sub">Vocabulário canônico. Sem sinônimos soltos na interface — e uma fronteira clara entre o que se diz ao financeiro e o que se diz ao cliente.</p>
+      </div>
+      <div class="grid-3">
+        <div class="glossary-card"><div class="glossary-term">Régua de cobrança</div><div class="glossary-def">A sequência automatizada de notificações de um boleto, ancorada no vencimento. Termo único — não "fluxo" nem "trilha".</div></div>
+        <div class="glossary-card"><div class="glossary-term">Notificação</div><div class="glossary-deprecated">antes: "disparo", "mensagem"</div><div class="glossary-def">Cada toque enviado ao cliente (WhatsApp no MVP). Sempre "notificação" na interface.</div></div>
+        <div class="glossary-card"><div class="glossary-term">Inadimplente</div><div class="glossary-def">Cliente com atraso prolongado. <b>Uso interno</b> — tabela, dashboard, diretoria. Nunca aparece na notificação ao cliente.</div></div>
+        <div class="glossary-card"><div class="glossary-term">Em aberto</div><div class="glossary-deprecated">externo · evitar: "dívida", "devedor"</div><div class="glossary-def">Como a situação é dita <b>ao cliente</b>: "boleto em aberto / vencido". Linguagem neutra, respeitosa.</div></div>
+        <div class="glossary-card"><div class="glossary-term">Sincronização</div><div class="glossary-def">Atualização da base vinda do Certtus. Sempre acompanhada do horário ("há 12 min") — o frescor sustenta a autoridade.</div></div>
+        <div class="glossary-card"><div class="glossary-term">Boleto</div><div class="glossary-def">A cobrança individual. Identificado por nº em mono. Estado segue a régua de severidade (pago → inadimplente).</div></div>
+        <div class="glossary-card"><div class="glossary-term">Fato financeiro</div><div class="glossary-def">Faturado, pago, cadastro do cliente. <b>Origem: Certtus</b>, somente leitura — o produto consulta, nunca edita.</div></div>
+        <div class="glossary-card"><div class="glossary-term">Estado do processo</div><div class="glossary-def">Régua, etapa, notificações, pausas e exceções. <b>Do produto</b> — a parte da verdade que o Cobrança RF cria e mantém.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 · ANATOMIA DE TELA -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">13 · Anatomia de tela</div>
+        <h2 class="s-title">Onde cada coisa <span class="accent">vive.</span></h2>
+        <p class="s-sub">As três telas centrais do dia a dia. (A quarta — Configurações — reusa o mesmo esqueleto: nav lateral + conteúdo em formulário.)</p>
+      </div>
+      <div class="grid-3">
+        <div>
+          <div class="cmp-name" style="font-size:var(--text-base);margin-bottom:var(--space-2)">Dashboard</div>
+          <div class="anatomy-frame">
+            <div class="anatomy-region an-side"><span class="region-label">Nav 232px</span></div>
+            <div class="an-main">
+              <div class="anatomy-region an-top"><span class="region-label">KPIs + sync</span></div>
+              <div class="anatomy-region an-body"><span class="region-label">Resumo do mês</span></div>
+            </div>
+          </div>
+          <ul class="anatomy-rules">
+            <li>KPI da inadimplência em destaque (Plex Serif grande)</li>
+            <li>"Sincronizado há X min" sempre visível no topo</li>
+            <li>Leitura apresentável à diretoria</li>
+          </ul>
+        </div>
+        <div>
+          <div class="cmp-name" style="font-size:var(--text-base);margin-bottom:var(--space-2)">Lista de cobranças</div>
+          <div class="anatomy-frame">
+            <div class="anatomy-region an-side"><span class="region-label">Nav 232px</span></div>
+            <div class="an-main">
+              <div class="anatomy-region an-top"><span class="region-label">Filtros + tabs</span></div>
+              <div class="anatomy-region an-body"><span class="region-label">Tabela densa</span></div>
+            </div>
+          </div>
+          <ul class="anatomy-rules">
+            <li>Tabela é a protagonista — spec própria no slide 15</li>
+            <li>Badge de status em cada linha</li>
+            <li>Tabs por estado (em aberto / atrasado / pago)</li>
+          </ul>
+        </div>
+        <div>
+          <div class="cmp-name" style="font-size:var(--text-base);margin-bottom:var(--space-2)">Detalhe do cliente</div>
+          <div class="anatomy-frame">
+            <div class="anatomy-region an-side"><span class="region-label">Nav 232px</span></div>
+            <div class="an-main">
+              <div class="anatomy-region an-top"><span class="region-label">Cliente + saldo</span></div>
+              <div class="anatomy-region an-body"><span class="region-label">Régua + histórico</span></div>
+            </div>
+          </div>
+          <ul class="anatomy-rules">
+            <li>Régua de cobrança como linha do tempo</li>
+            <li>Histórico de notificações abaixo</li>
+            <li>Ação destrutiva isolada das demais</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14 · COMPONENTES BASE -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">14 · Componentes · base</div>
+        <h2 class="s-title">Botão, campo, <span class="accent">badge.</span></h2>
+      </div>
+      <div class="grid-2" style="margin-bottom:var(--space-5)">
+        <div class="component-block">
+          <div class="cmp-name">Botão</div>
+          <div class="component-preview">
+            <button class="btn btn-primary">Registrar pagamento</button>
+            <button class="btn btn-secondary">Cancelar</button>
+            <button class="btn btn-ghost">Detalhes</button>
+            <button class="btn btn-destructive">Negativar</button>
+          </div>
+          <div class="component-preview">
+            <button class="btn btn-primary is-loading">Notificar</button>
+            <button class="btn btn-primary" disabled>Desabilitado</button>
+            <span class="lead" style="font-size:var(--text-xs);color:var(--color-text-muted)">← loading: obrigatório em toda ação de rede</span>
+          </div>
+          <div class="component-rules">
+            <div class="rule-do">✓ Um único botão primário (aço) por tela.</div>
+            <div class="rule-do">✓ Ação que envia notificação SEMPRE entra em loading no clique — duplo clique = duas mensagens ao cliente e risco de bloqueio do WhatsApp.</div>
+            <div class="rule-dont">✕ Laranja nunca preenche botão; destrutiva é vermelha.</div>
+            <div class="rule-dont">✕ Nunca desabilitar sem dizer o porquê ao usuário.</div>
+          </div>
+        </div>
+        <div class="component-block">
+          <div class="cmp-name">Campo & fato Certtus</div>
+          <div class="component-preview" style="align-items:flex-start">
+            <div class="input-group"><label class="label">Dia de vencimento</label><input class="input is-focus" value="10"><span class="helper-text">Aplicado à régua geral.</span></div>
+            <div class="fact">
+              <span class="fact-label"><span class="tag tag--source"><svg class="icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Certtus</span>Valor do boleto</span>
+              <span class="fact-value">R$ 1.284,90</span>
+            </div>
+          </div>
+          <div class="component-rules">
+            <div class="rule-do">✓ Fato financeiro é texto de exibição com a tag Certtus — não parece formulário, porque nunca é editável.</div>
+            <div class="rule-do">✓ Input readonly (cinza) só quando o alinhamento de formulário exigir.</div>
+            <div class="rule-dont">✕ Erro só com texto; nunca placeholder como rótulo.</div>
+          </div>
+        </div>
+      </div>
+      <div class="component-block">
+        <div class="cmp-name">Badge de status & Tag</div>
+        <div class="voice-state" style="margin-bottom:2px">Estados financeiros · pílula (fato do Certtus) · 13px</div>
+        <div class="component-preview">
+          <span class="badge badge-pago">Pago</span>
+          <span class="badge badge-avencer">A vencer</span>
+          <span class="badge badge-hoje">Vence hoje</span>
+          <span class="badge badge-atrasado">Atrasado · 7 dias</span>
+          <span class="badge badge-inadimplente">Inadimplente · 32 dias</span>
+        </div>
+        <div class="voice-state" style="margin:var(--space-3) 0 2px">Estados do processo · quadrado/mono (do produto)</div>
+        <div class="component-preview">
+          <span class="badge-proc badge-pausada">Régua pausada</span>
+          <span class="badge-proc badge-aprovacao">Aguardando aprovação</span>
+          <span class="badge-proc badge-excecao">Exceção manual</span>
+          <span class="tag tag--source"><svg class="icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Certtus</span>
+          <span class="tag">WhatsApp</span>
+        </div>
+        <div class="component-rules">
+          <div class="rule-do">✓ Financeiro = pílula colorida; processo = quadrado/mono. A forma separa as categorias.</div>
+          <div class="rule-dont">✕ Não usar cor da régua de severidade em estado de processo (exceção manual usa a família "hoje" por ser atenção, não severidade).</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15 · TABELA -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">15 · Componentes · tabela</div>
+        <h2 class="s-title">A <span class="accent">protagonista.</span></h2>
+        <p class="s-sub">Linha de 44px (densa: 36px). Números e datas em mono tabular à direita. Coluna de origem Certtus marcada no cabeçalho. Hover neutro, seleção em aço-50.</p>
+      </div>
+      <table class="dtable" style="margin-bottom:var(--space-5)">
+        <thead><tr>
+          <th>Cliente</th>
+          <th>Boleto <svg class="icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></th>
+          <th class="th-num sort-on">Vencimento ↓</th>
+          <th class="th-num">Valor <svg class="icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></th>
+          <th>Status</th>
+          <th>Régua</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="td-name">Auto Center São José</td><td class="td-id">NF 0008431</td><td class="td-num">03/05/2026</td><td class="td-num">R$ 2.310,00</td><td><span class="badge badge-inadimplente">Inadimplente · 38 dias</span></td><td><span class="badge-proc badge-aprovacao">Aguardando aprovação</span></td></tr>
+          <tr class="is-selected"><td class="td-name">Transportes Vila Rica</td><td class="td-id">NF 0008502</td><td class="td-num">03/06/2026</td><td class="td-num">R$ 1.284,90</td><td><span class="badge badge-atrasado">Atrasado · 7 dias</span></td><td><span class="badge-proc badge-pausada">Régua pausada</span></td></tr>
+          <tr><td class="td-name">Mecânica do Pedro</td><td class="td-id">NF 0008517</td><td class="td-num">10/06/2026</td><td class="td-num">R$ 640,00</td><td><span class="badge badge-hoje">Vence hoje</span></td><td>—</td></tr>
+          <tr><td class="td-name">Fazenda Boa Vista</td><td class="td-id">NF 0008520</td><td class="td-num">24/06/2026</td><td class="td-num">R$ 5.180,50</td><td><span class="badge badge-avencer">A vencer</span></td><td>—</td></tr>
+          <tr><td class="td-name">Oficina Central</td><td class="td-id">NF 0008390</td><td class="td-num">28/05/2026</td><td class="td-num">R$ 980,00</td><td><span class="badge badge-pago">Pago</span></td><td>—</td></tr>
+        </tbody>
+      </table>
+      <div class="grid-2">
+        <div class="component-rules" style="border:none;padding:0">
+          <div class="rule-do">✓ Cadeado no cabeçalho marca coluna de fato Certtus — uma vez por coluna, não por célula.</div>
+          <div class="rule-do">✓ Ordenação: seta + cor de link na coluna ativa. Padrão: vencimento ascendente (mais urgente primeiro).</div>
+          <div class="rule-do">✓ "—" para régua inexistente; nunca célula vazia muda.</div>
+        </div>
+        <div class="component-rules" style="border:none;padding:0">
+          <div class="rule-dont">✕ Sem zebra: separação por borda de 1px. Zebra + 5 cores de badge = ruído.</div>
+          <div class="rule-dont">✕ Valor nunca truncado nem abreviado em linha.</div>
+          <div class="rule-dont">✕ Ação por linha só em hover ou na linha selecionada — nunca 20 botões visíveis de uma vez.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16 · COMPONENTES LAYOUT -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">16 · Componentes · layout</div>
+        <h2 class="s-title">Card, modal, <span class="accent">navegação.</span></h2>
+      </div>
+      <div class="grid-3" style="align-items:start">
+        <div class="stack">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Auto Center São José</span><span class="badge badge-atrasado">Atrasado</span></div>
+            <p class="card-body">3 boletos em aberto · <span class="mono num">R$ 5.494,90</span>. Última notificação há 2 dias.</p>
+            <div class="card-footer"><button class="btn btn-ghost btn-sm">Ver régua</button><button class="btn btn-primary btn-sm">Notificar</button></div>
+          </div>
+          <div class="component-rules" style="border:none;padding:0">
+            <div class="rule-do">✓ Card para agrupar dados de uma entidade.</div>
+            <div class="rule-dont">✕ Não usar card como botão inteiro clicável.</div>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="modal-prev">
+            <h4>Negativar cliente?</h4>
+            <p>Esta ação registra a inadimplência em órgão de proteção ao crédito. Não pode ser desfeita.</p>
+            <div class="row" style="justify-content:flex-end"><button class="btn btn-secondary btn-sm">Cancelar</button><button class="btn btn-destructive btn-sm">Negativar</button></div>
+          </div>
+          <div class="component-rules" style="border:none;padding:0">
+            <div class="rule-do">✓ Modal só para confirmação destrutiva ou foco total.</div>
+            <div class="rule-dont">✕ Ação destrutiva nunca é a opção padrão/destacada.</div>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="navitem-demo">
+            <div class="navitem on"><svg class="icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>Dashboard</div>
+            <div class="navitem"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>Cobranças</div>
+            <div class="navitem"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>Clientes</div>
+            <div class="navitem"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3.9a7 7 0 0 0-1.7-1L16.5 2h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.3-.9-2 3.4 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.3.9 2-3.4-2-1.5c.06-.3.1-.66.1-1Z"/></svg>Configurações</div>
+          </div>
+          <div class="component-rules" style="border:none;padding:0">
+            <div class="rule-do">✓ Ativo = barra laranja de 3px + texto branco. Laranja aponta, não preenche.</div>
+            <div class="rule-dont">✕ Nav lateral fixa (232px) — não colapsa no desktop.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17 · FEEDBACK -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">17 · Componentes · feedback</div>
+        <h2 class="s-title">Quando o sistema <span class="accent">responde.</span></h2>
+      </div>
+      <div class="grid-2">
+        <div class="stack">
+          <div class="alert alert-success"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 5-5"/></svg><div><strong>Régua ativada.</strong>14 boletos entraram na sequência.</div></div>
+          <div class="alert alert-info"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg><div><strong>Sincronizado há 12 min.</strong>Base do Certtus atualizada.</div></div>
+          <div class="alert alert-warning"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg><div><strong>3 notificações pendentes.</strong>Aguardando nº de WhatsApp.</div></div>
+          <div class="component-rules" style="border:none;padding:0">
+            <div class="rule-do">✓ Alert para estado persistente na tela.</div>
+            <div class="rule-do">✓ Toast para confirmação efêmera de ação.</div>
+            <div class="rule-dont">✕ Erro crítico nunca em toast — usa alert fixo.</div>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="toast"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Notificação enviada.</div>
+          <div class="empty">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg>
+            <h4>Nenhuma cobrança em aberto</h4>
+            <p>Tudo recebido neste período.</p>
+          </div>
+          <div class="tile" style="padding:var(--space-4)">
+            <div class="voice-state" style="margin-bottom:8px">Loading · skeleton</div>
+            <div class="stack" style="gap:8px"><div class="skeleton" style="width:70%"></div><div class="skeleton" style="width:90%"></div><div class="skeleton" style="width:50%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 18 · DO'S & DON'TS -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">18 · Do's & Don'ts</div>
+        <h2 class="s-title">Certo vs. <span class="accent">errado.</span></h2>
+      </div>
+      <div class="dd-grid" style="margin-bottom:var(--space-5)">
+        <div class="dd dd-do"><div class="dd-head">✓ Faça · ação em aço, atenção em laranja</div><div class="dd-body"><div class="row"><button class="btn btn-primary">Notificar</button><button class="btn btn-secondary">Cancelar</button><span class="badge badge-hoje">Vence hoje</span></div><p class="dd-note">O botão executa em neutro; a cor quente fica livre para informar urgência.</p></div></div>
+        <div class="dd dd-dont"><div class="dd-head">✕ Não · botão laranja entre badges quentes</div><div class="dd-body"><div class="row"><button class="btn" style="background:var(--color-primary-500);color:#1A1206">Notificar</button><span class="badge badge-hoje">Vence hoje</span><span class="badge badge-atrasado">Atrasado</span></div><p class="dd-note">O laranja senta entre o âmbar e o vermelho — o olho lê o botão como mais um nível de severidade.</p></div></div>
+      </div>
+      <div class="dd-grid">
+        <div class="dd dd-do"><div class="dd-head">✓ Faça · copy sóbria</div><div class="dd-body"><div class="toast"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Pagamento registrado.</div><p class="dd-note">Factual, sem comemoração.</p></div></div>
+        <div class="dd dd-dont"><div class="dd-head">✕ Não · euforia e emoji</div><div class="dd-body"><div class="toast" style="background:var(--status-pago-base)">🎉 Aêê! Pagamento registrado com sucesso!!</div><p class="dd-note">Quebra a autoridade. Dona do processo não comemora.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 19 · PENDÊNCIAS -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">19 · Pendências do DS</div>
+        <h2 class="s-title">O que ainda <span class="accent">não está fechado.</span></h2>
+        <p class="s-sub">Um DS honesto declara as próprias lacunas. Nada abaixo deve ser inferido pelo desenvolvimento — ou está aqui resolvido, ou está aqui como pendência.</p>
+      </div>
+      <div class="grid-2">
+        <div class="pend">
+          <h4>Decisões a confirmar com a RF</h4>
+          <ul>
+            <li>Corte atrasado → inadimplente (proposta: ≥ D+30, alinhado à régua operacional).</li>
+            <li>Regra de perfis (financeiro / comercial / admin): proposta — ação sem permissão fica <b>oculta</b>; ação temporariamente indisponível fica <b>desabilitada com motivo</b>. Depende da definição de permissões do perfil comercial.</li>
+            <li>Abreviação de valores em KPI ("R$ 48,9 mil") — aceitável para a diretoria?</li>
+          </ul>
+        </div>
+        <div class="pend">
+          <h4>Componentes ainda não especificados</h4>
+          <ul>
+            <li>Select / dropdown e date picker (filtros da lista).</li>
+            <li>Tabs (lista de cobranças) e paginação de tabela.</li>
+            <li>Tooltip (valor exato sob KPI abreviado).</li>
+            <li>Toast com "desfazer" — relevante para pausar/retomar régua.</li>
+            <li>Editor e preview do template de notificação WhatsApp.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 20 · TOKEN REFERENCE -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="s-head">
+        <div class="eyebrow">20 · Referência de tokens</div>
+        <h2 class="s-title">A fonte da <span class="accent">verdade técnica.</span></h2>
+        <p class="s-sub">O que a engenharia copia para o protótipo. Tudo é CSS custom property — inclusive fundos, bordas e textos de status.</p>
+      </div>
+      <div class="cols-2">
+        <table class="token-table">
+          <thead><tr><th>Token</th><th>Valor</th></tr></thead>
+          <tr><td><span class="sw" style="background:var(--color-action)"></span>--color-action</td><td>#34474A · botão primário</td></tr>
+          <tr><td><span class="sw" style="background:var(--color-accent)"></span>--color-accent</td><td>#F76C31 · foco, indicador</td></tr>
+          <tr><td><span class="sw" style="background:var(--color-link)"></span>--color-link</td><td>#B8460F · links, ghost</td></tr>
+          <tr><td><span class="sw" style="background:var(--status-pago-base)"></span>--status-pago-*</td><td>base/bg/border/fg</td></tr>
+          <tr><td><span class="sw" style="background:var(--status-avencer-base)"></span>--status-avencer-*</td><td>base/bg/border/fg</td></tr>
+          <tr><td><span class="sw" style="background:var(--status-hoje-base)"></span>--status-hoje-*</td><td>base/bg/border/fg</td></tr>
+          <tr><td><span class="sw" style="background:var(--status-atrasado-base)"></span>--status-atrasado-*</td><td>base/bg/border/fg</td></tr>
+          <tr><td><span class="sw" style="background:var(--status-inadimplente-base)"></span>--status-inadimplente-*</td><td>base/bg/border/fg</td></tr>
+          <tr><td><span class="sw" style="background:var(--color-info)"></span>--color-info-*</td><td>#1F5C8B · base/bg/border/fg</td></tr>
+          <tr><td><span class="sw" style="background:var(--color-bg)"></span>--color-bg / surface</td><td>#F7F8F2 / #FFFFFF</td></tr>
+        </table>
+        <table class="token-table">
+          <thead><tr><th>Token</th><th>Valor</th></tr></thead>
+          <tr><td>--font-display / body / mono</td><td>IBM Plex Serif / Sans / Mono</td></tr>
+          <tr><td>--text-xs … 5xl</td><td>11 · 13 · 16 · 20 · 25 · 31 · 39 · 49 · 61</td></tr>
+          <tr><td>--space (base)</td><td>4px · escala 1–20</td></tr>
+          <tr><td>--nav-width</td><td>232px</td></tr>
+          <tr><td>--table-row-h / -dense</td><td>44px / 36px</td></tr>
+          <tr><td>--radius-sm…xl, full</td><td>4 · 8 · 12 · 16 · pílula</td></tr>
+          <tr><td>--ring / --ring-error</td><td>laranja .34 / vermelho .22</td></tr>
+          <tr><td>--duration-fast…slower</td><td>100 · 200 · 300 · 500ms</td></tr>
+        </table>
+      </div>
+      <p class="lead" style="font-size:var(--text-sm);margin-top:var(--space-5);color:var(--color-text-muted)">
+        Cobrança RF · Design System v5 · junho 2026 · Retífica Formiguense × Origami Lab. Substitui o v4 (capa "v2"). Base para protótipo e produção.</p>
+    </div>
+  </section>
+
+</div>
+
+<div id="slide-counter"><b>01</b> / 20</div>
+<button class="nav-btn" id="nav-prev" aria-label="Slide anterior">‹</button>
+<button class="nav-btn" id="nav-next" aria-label="Próximo slide">›</button>
+<div class="kb-hint">← → para navegar · P imprime/PDF</div>
+
+<script>
+let current=0;
+const slides=document.querySelectorAll('.slide');
+const total=slides.length;
+function updateProgress(){
+  document.getElementById('slide-counter').innerHTML='<b>'+String(current+1).padStart(2,'0')+'</b> / '+total;
+  document.getElementById('progress-bar').style.width=(((current+1)/total)*100)+'%';
+}
+function goTo(n){
+  slides[current].classList.remove('active');
+  slides[current].classList.add('exit-left');
+  const prev=current;
+  setTimeout(()=>slides[prev].classList.remove('exit-left'),500);
+  current=(n+total)%total;
+  slides[current].classList.add('active');
+  slides[current].querySelector('.slide-inner,.cover-inner')?.scrollTo(0,0);
+  updateProgress();
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '){e.preventDefault();goTo(current+1)}
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();goTo(current-1)}
+  if(e.key==='Home')goTo(0); if(e.key==='End')goTo(total-1);
+});
+document.getElementById('nav-next').addEventListener('click',()=>goTo(current+1));
+document.getElementById('nav-prev').addEventListener('click',()=>goTo(current-1));
+updateProgress();
+</script>
+</body>
+</html>

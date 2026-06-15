@@ -1,0 +1,226 @@
+@import "tailwindcss";
+
+/* ════════════════════════════════════════════════════════════════════════
+   Cobrança RF · Design System v5 → Tailwind 4 theme
+   Fonte da verdade: ds-v5-retifica.html (slide 20 · referência de tokens)
+
+   Papéis de cor (regra de ouro do DS):
+   · Aço (secondary) AGE — botão primário, nav, estrutura
+   · Laranja (primary) APONTA — foco, link, indicador ativo. Nunca fill de botão
+   · Régua de severidade INFORMA — cada status com família base/bg/border/fg
+   ════════════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* desabilita a paleta default do Tailwind — nenhum hex fora do DS */
+  --color-*: initial;
+
+  --color-white: #ffffff;
+
+  /* ── Laranja Retífica · atenção (nunca fill de botão, nunca severidade) ── */
+  --color-primary-50: #FEF3EC;
+  --color-primary-100: #FDE2D2;
+  --color-primary-200: #FBC9A8;
+  --color-primary-300: #F9A574;
+  --color-primary-400: #F8853F;
+  --color-primary-500: #F76C31;
+  --color-primary-600: #E35E22;
+  --color-primary-700: #B8460F;
+  --color-primary-800: #973A0C;
+  --color-primary-900: #6E2A09;
+
+  /* ── Aço · estrutura + ação ── */
+  --color-steel-50: #EEF1F1;
+  --color-steel-100: #DCE2E2;
+  --color-steel-200: #BCC8C8;
+  --color-steel-300: #8FA1A1;
+  --color-steel-400: #5C7173;
+  --color-steel-500: #34474A;
+  --color-steel-600: #2A3A3C;
+  --color-steel-700: #212E30;
+  --color-steel-800: #1A2426;
+  --color-steel-900: #0F1718;
+
+  /* ── Neutros ── */
+  --color-neutral-50: #F7F8F2;
+  --color-neutral-100: #EFF1EA;
+  --color-neutral-200: #E5E8E1;
+  --color-neutral-300: #D3D8CF;
+  --color-neutral-400: #AEB6AF;
+  --color-neutral-500: #79847F;
+  --color-neutral-600: #5A6562;
+  --color-neutral-700: #46524F;
+  --color-neutral-800: #2C3634;
+  --color-neutral-900: #1A2625;
+  --color-neutral-950: #0F1716;
+
+  /* ── Régua de severidade financeira · 4 tokens por família ── */
+  --color-pago-base: #0E895D;
+  --color-pago-bg: #E4F3EA;
+  --color-pago-border: #BCE3CD;
+  --color-pago-fg: #0B6B49;
+
+  --color-avencer-base: #5C7173;
+  --color-avencer-bg: #EFF1EA;
+  --color-avencer-border: #E5E8E1;
+  --color-avencer-fg: #46524F;
+
+  --color-hoje-base: #C7921F;
+  --color-hoje-bg: #FBF1DA;
+  --color-hoje-border: #F2DCA8;
+  --color-hoje-fg: #8A5C0A;
+
+  --color-atrasado-base: #C8342A;
+  --color-atrasado-bg: #FBE7E4;
+  --color-atrasado-border: #F2C2BC;
+  --color-atrasado-fg: #A82A21;
+
+  --color-inadimplente-base: #9E1B14;
+  --color-inadimplente-bg: #F6DDD9;
+  --color-inadimplente-border: #E6ADA5;
+  --color-inadimplente-fg: #7E1810;
+
+  /* ── Semântica de sistema · aliases (a FORMA distingue, não a cor) ── */
+  --color-success: var(--color-pago-base);
+  --color-success-bg: var(--color-pago-bg);
+  --color-success-border: var(--color-pago-border);
+  --color-success-fg: var(--color-pago-fg);
+
+  --color-warning: var(--color-hoje-base);
+  --color-warning-bg: var(--color-hoje-bg);
+  --color-warning-border: var(--color-hoje-border);
+  --color-warning-fg: var(--color-hoje-fg);
+
+  --color-error: var(--color-atrasado-base);
+  --color-error-bg: var(--color-atrasado-bg);
+  --color-error-border: var(--color-atrasado-border);
+  --color-error-fg: var(--color-atrasado-fg);
+
+  --color-info: #1F5C8B;
+  --color-info-bg: #E5F0F8;
+  --color-info-border: #BBD8EC;
+  --color-info-fg: #1A4E76;
+
+  /* ── Ação, acento e superfícies ── */
+  --color-action: var(--color-steel-500);
+  --color-action-hover: var(--color-steel-600);
+  --color-action-active: var(--color-steel-700);
+  --color-accent: var(--color-primary-500);
+  --color-link: var(--color-primary-700);
+
+  --color-canvas: var(--color-neutral-50);
+  --color-surface: #ffffff;
+  --color-line: var(--color-neutral-200);
+  --color-line-strong: var(--color-neutral-300);
+  --color-ink: var(--color-neutral-900);
+  --color-ink-muted: var(--color-neutral-500);
+
+  /* ── Tipografia · IBM Plex (vars injetadas pelo next/font) ── */
+  --font-display: var(--font-ibm-serif), Georgia, serif;
+  --font-body: var(--font-ibm-sans), system-ui, sans-serif;
+  --font-mono: var(--font-ibm-mono), ui-monospace, monospace;
+
+  /* Escala 1.25 a partir de 16 · piso de 11px (produto operado por horas) */
+  --text-xs: 0.6875rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.5;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.375;
+  --text-xl: 1.5625rem;
+  --text-xl--line-height: 1.25;
+  --text-2xl: 1.9375rem;
+  --text-2xl--line-height: 1.15;
+  --text-3xl: 2.4375rem;
+  --text-3xl--line-height: 1.15;
+  --text-4xl: 3.0625rem;
+  --text-4xl--line-height: 1.1;
+  --text-5xl: 3.8125rem;
+  --text-5xl--line-height: 1.05;
+
+  --tracking-tight: -0.025em;
+  --tracking-wide: 0.05em;
+  --tracking-widest: 0.14em;
+
+  /* ── Forma / elevação ── */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  --shadow-xs: 0 1px 2px rgba(16, 40, 38, 0.05);
+  --shadow-sm: 0 1px 3px rgba(16, 40, 38, 0.10), 0 1px 2px rgba(16, 40, 38, 0.06);
+  --shadow-md: 0 4px 10px -2px rgba(16, 40, 38, 0.10), 0 2px 6px -2px rgba(16, 40, 38, 0.06);
+  --shadow-lg: 0 12px 24px -6px rgba(16, 40, 38, 0.14), 0 4px 10px -4px rgba(16, 40, 38, 0.08);
+  --shadow-xl: 0 24px 48px -12px rgba(16, 40, 38, 0.20);
+  --shadow-ring: 0 0 0 3px rgba(247, 108, 49, 0.34);
+  --shadow-ring-error: 0 0 0 3px rgba(200, 52, 42, 0.22);
+
+  /* ── Movimento ── */
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+
+  --animate-skeleton: skeleton 1.4s linear infinite;
+  --animate-spin: spin 0.7s linear infinite;
+  --animate-fade-up: fade-up 300ms var(--ease-out) both;
+
+  @keyframes skeleton {
+    to { background-position: -200% 0; }
+  }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* layout do DS em rem (base 232/44/36px) — escala junto com a fonte raiz */
+:root {
+  --nav-width: 14.5rem;
+  --table-row-h: 2.75rem;
+  --table-row-h-dense: 2.25rem;
+}
+
+@layer base {
+  /* densidade calibrada: 110% (17.6px) — a leitura em estação de trabalho
+     pedia um corpo maior que os 16px default do navegador */
+  html {
+    font-size: 110%;
+  }
+  body {
+    @apply bg-canvas text-ink font-body antialiased;
+  }
+  ::selection {
+    background: var(--color-primary-200);
+  }
+  /* scrollbar discreta — densidade sem caos */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-neutral-300) transparent;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* rótulo mono uppercase 11px — eyebrows, headers de coluna, section labels */
+  .label-mono {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: var(--tracking-widest);
+    text-transform: uppercase;
+  }
+  /* algarismos de dado: sempre lining + tabular */
+  .num {
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  /* anel de foco laranja do DS */
+  .focus-ring {
+    @apply outline-none focus-visible:shadow-ring;
+  }
+}
