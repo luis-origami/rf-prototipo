@@ -54,7 +54,7 @@ export function InadimplenciaRecuperadoChart({ dados }: InadimplenciaRecuperadoC
             <div className="num font-mono text-sm">
               Recuperado <span className="font-semibold">{formatarMoeda(sel.recuperado)}</span>
               <span className="ml-2 text-steel-200">
-                {selTotal > 0 ? Math.round((sel.recuperado / selTotal) * 100) : 0}% do estoque
+                {selTotal > 0 ? Math.round((sel.recuperado / selTotal) * 100) : 0}% do montante do mês
               </span>
             </div>
           </div>
