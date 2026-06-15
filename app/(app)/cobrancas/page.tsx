@@ -94,6 +94,8 @@ function CobrancasContent() {
   const searchParams = useSearchParams()
   const deUrl = searchParams.get('venc_de') ?? ''
   const ateUrl = searchParams.get('venc_ate') ?? ''
+  const atrasoDeUrl = searchParams.get('atraso_de') ?? ''
+  const atrasoAteUrl = searchParams.get('atraso_ate') ?? ''
 
   const abonos = useAbonos()
   const colunasKanban = useColunasKanban()
@@ -111,6 +113,8 @@ function CobrancasContent() {
   const [abonoFiltro, setAbonoFiltro] = useState<Set<string>>(new Set())
   const [vencDe, setVencDe] = useState(ISO_DATA.test(deUrl) ? deUrl : '')
   const [vencAte, setVencAte] = useState(ISO_DATA.test(ateUrl) ? ateUrl : '')
+  const [atrasoDe, setAtrasoDe] = useState<number | null>(atrasoDeUrl ? Number(atrasoDeUrl) : null)
+  const [atrasoAte, setAtrasoAte] = useState<number | null>(atrasoAteUrl ? Number(atrasoAteUrl) : null)
 
   // comunicações registradas nesta sessão a partir do Kanban — atualizam o
   // indicador dos cards (estado de processo, nada grava no Certtus)
@@ -130,6 +134,11 @@ function CobrancasContent() {
           return false
         if (vencDe && b.vencimento < vencDe) return false
         if (vencAte && b.vencimento > vencAte) return false
+        if (atrasoDe != null) {
+          const dias = b.diasAtraso ?? 0
+          if (dias < atrasoDe) return false
+          if (atrasoAte != null && dias > atrasoAte) return false
+        }
         if (!q) return true
         const cliente = getClienteById(b.clienteId)
         return (
@@ -144,7 +153,7 @@ function CobrancasContent() {
         const pagoB = b.status === 'pago' || b.status === 'pago_atraso' ? 1 : 0
         return pagoA - pagoB || a.vencimento.localeCompare(b.vencimento)
       })
-  }, [query, statusFiltro, empresaFiltro, abonoFiltro, abonos, vencDe, vencAte])
+  }, [query, statusFiltro, empresaFiltro, abonoFiltro, abonos, vencDe, vencAte, atrasoDe, atrasoAte])
 
   // Kanban: só títulos em aberto, dentro da régua (com marco atingido — senão
   // o contador divergiria do board) + filtro de régua

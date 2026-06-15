@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { formatarMoeda, type PrevistoRecebidoMes } from '../../../../mocks'
 import { useTooltipClamp } from './useTooltipClamp'
 
@@ -21,6 +22,7 @@ interface PrevistoRecebidoChartProps {
 }
 
 export function PrevistoRecebidoChart({ dados }: PrevistoRecebidoChartProps) {
+  const router = useRouter()
   const [ativo, setAtivo] = useState<number | null>(null)
   const max = Math.max(...dados.map((d) => d.previsto), 1)
 
@@ -67,6 +69,7 @@ export function PrevistoRecebidoChart({ dados }: PrevistoRecebidoChartProps) {
               key={d.mes}
               type="button"
               aria-label={`${rotuloMes(d.mes)}: previsto ${formatarMoeda(d.previsto)}, recebido ${formatarMoeda(d.recebido)}`}
+              onClick={() => router.push(`/cobrancas?venc_de=${d.mes}-01&venc_ate=${d.mes}-31`)}
               onMouseEnter={() => setAtivo(i)}
               onMouseLeave={() => setAtivo(null)}
               onFocus={() => setAtivo(i)}

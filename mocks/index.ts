@@ -742,11 +742,24 @@ export const kpis = computarKpis('grupo')
 // dos boletos — consistente com a tela de cobranças. Faixas mais antigas
 // crescendo = carteira envelhecendo (menor probabilidade de recuperação).
 
-export const FAIXAS_AGING = ['0–29 dias', '30–59 dias', '60–89 dias', '90–180 dias'] as const
+export const FAIXAS_AGING = [
+  'Atraso operacional',
+  'Alerta de risco',
+  'Inadimplência geral',
+  'Inadimplência crítica',
+] as const
+
+// dias de atraso [min, max|null] por índice de faixa — null = sem limite superior
+export const FAIXAS_AGING_DIAS: [number, number | null][] = [
+  [1, 5],
+  [6, 15],
+  [16, 29],
+  [30, null],
+]
 
 export interface EvolucaoMes {
   mes: string                              // YYYY-MM
-  faixas: [number, number, number, number] // 0–29 · 30–59 · 60–89 · 90–180
+  faixas: [number, number, number, number] // 1–5 · 6–15 · 16–29 · 30+
   recuperado: number                       // valor inadimplente recuperado no mês
 }
 
@@ -827,7 +840,7 @@ export function getEvolucaoInadimplencia(empresa: EmpresaFiltro = 'grupo'): Evol
     if (b.status !== 'atrasado' && b.status !== 'inadimplente') continue
     const d = b.diasAtraso ?? 0
     if (d > 180) continue
-    const idx = d <= 29 ? 0 : d <= 59 ? 1 : d <= 89 ? 2 : 3
+    const idx = d <= 5 ? 0 : d <= 15 ? 1 : d <= 29 ? 2 : 3
     atual[idx] += b.valor
   }
   return [

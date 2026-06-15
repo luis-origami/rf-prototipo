@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { formatarMoeda, type EvolucaoMes } from '../../../../mocks'
 import { useTooltipClamp } from './useTooltipClamp'
 
@@ -22,6 +23,7 @@ interface InadimplenciaRecuperadoChartProps {
 }
 
 export function InadimplenciaRecuperadoChart({ dados }: InadimplenciaRecuperadoChartProps) {
+  const router = useRouter()
   const [ativo, setAtivo] = useState<number | null>(null)
 
   const totais = dados.map((d) => d.faixas.reduce((s, v) => s + v, 0))
@@ -71,6 +73,7 @@ export function InadimplenciaRecuperadoChart({ dados }: InadimplenciaRecuperadoC
               key={d.mes}
               type="button"
               aria-label={`${rotuloMes(d.mes)}: inadimplente ${formatarMoeda(totais[i])}, recuperado ${formatarMoeda(d.recuperado)}`}
+              onClick={() => router.push(`/cobrancas?venc_de=${d.mes}-01&venc_ate=${d.mes}-31`)}
               onMouseEnter={() => setAtivo(i)}
               onMouseLeave={() => setAtivo(null)}
               onFocus={() => setAtivo(i)}

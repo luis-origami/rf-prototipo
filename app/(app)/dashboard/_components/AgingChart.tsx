@@ -21,9 +21,11 @@ interface AgingChartProps {
   showLegend?: boolean
   /** 'column': um item por linha, distribuído para preencher a altura do card */
   legendLayout?: 'row' | 'column'
+  /** callback de drilldown — índice do segmento clicado */
+  onSegmentoClick?: (index: number) => void
 }
 
-export function AgingChart({ faixas, showLegend = true, legendLayout = 'row' }: AgingChartProps) {
+export function AgingChart({ faixas, showLegend = true, legendLayout = 'row', onSegmentoClick }: AgingChartProps) {
   const [ativo, setAtivo] = useState<number | null>(null)
   const total = faixas.reduce((s, f) => s + f.valor, 0)
 
@@ -76,6 +78,7 @@ export function AgingChart({ faixas, showLegend = true, legendLayout = 'row' }: 
                 key={s.label}
                 type="button"
                 aria-label={`${s.label}: ${formatarMoeda(s.valor)}, ${Math.round(s.pct)}% da carteira`}
+                onClick={() => onSegmentoClick?.(i)}
                 onMouseEnter={() => setAtivo(i)}
                 onMouseLeave={() => setAtivo(null)}
                 onFocus={() => setAtivo(i)}
@@ -108,6 +111,7 @@ export function AgingChart({ faixas, showLegend = true, legendLayout = 'row' }: 
             <button
               key={s.label}
               type="button"
+              onClick={() => onSegmentoClick?.(i)}
               onMouseEnter={() => setAtivo(i)}
               onMouseLeave={() => setAtivo(null)}
               onFocus={() => setAtivo(i)}
@@ -129,6 +133,7 @@ export function AgingChart({ faixas, showLegend = true, legendLayout = 'row' }: 
             <button
               key={s.label}
               type="button"
+              onClick={() => onSegmentoClick?.(i)}
               onMouseEnter={() => setAtivo(i)}
               onMouseLeave={() => setAtivo(null)}
               onFocus={() => setAtivo(i)}

@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { diasEntre, formatarData, formatarMoeda, DATA_BASE, type Boleto } from '../../../../mocks'
 import { Card } from '../../../../components/ui/Card'
 import { IconCheck } from '../../../../components/icons'
@@ -43,6 +44,7 @@ interface RecebiveisCardProps {
 }
 
 export function RecebiveisCard({ boletos, ativas, onToggle }: RecebiveisCardProps) {
+  const router = useRouter()
   const porFaixa = FAIXAS_RECEBIVEIS.map((f) => {
     const itens = boletos.filter((b) => faixaDoBoleto(b) === f.id)
     return { ...f, valor: itens.reduce((s, b) => s + b.valor, 0), qtd: itens.length }
@@ -53,6 +55,19 @@ export function RecebiveisCard({ boletos, ativas, onToggle }: RecebiveisCardProp
   const qtdAtiva = ativasComValor.reduce((s, f) => s + f.qtd, 0)
 
   const faixasBarra: AgingFaixa[] = ativasComValor.map(({ label, valor, cls }) => ({ label, valor, cls }))
+
+  function navegarSegmento(segIndex: number) {
+    const faixa = ativasComValor[segIndex]
+    if (!faixa) return
+    const addDias = (dias: number) => {
+      const d = new Date(DATA_BASE)
+      d.setDate(d.getDate() + dias)
+      return d.toISOString().slice(0, 10)
+    }
+    const de = addDias(faixa.de)
+    const ate = addDias(faixa.ate)
+    router.push(`/cobrancas?venc_de=${de}&venc_ate=${ate}`)
+  }
 
   // recorte compartilhado com a seção de forma de pagamento
   const previstos = boletos.filter((b) => {
@@ -86,7 +101,7 @@ export function RecebiveisCard({ boletos, ativas, onToggle }: RecebiveisCardProp
                 : 'Nenhum título a vencer nas faixas selecionadas.'}
             </p>
           ) : (
-            <AgingChart faixas={faixasBarra} showLegend={false} />
+            <AgingChart faixas={faixasBarra} showLegend={false} onSegmentoClick={navegarSegmento} />
           )}
         </div>
 

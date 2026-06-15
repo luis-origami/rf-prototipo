@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   computarKpis,
   boletosDaEmpresa,
@@ -25,6 +26,7 @@ import { RecebiveisCard, FAIXAS_RECEBIVEIS } from './_components/RecebiveisCard'
 import { EmpresaSelect } from './_components/EmpresaSelect'
 
 export default function Dashboard() {
+  const router = useRouter()
   const { toast, toastHost } = useToast()
   const [syncing, setSyncing] = useState(false)
   // filtro de empresa do painel — dropdown no cabeçalho, refiltra KPIs e gráficos
@@ -59,6 +61,25 @@ export default function Dashboard() {
     { label: '91–180 dias', valor: kpis.aging.de91a180, cls: 'bg-neutral-800' },
     { label: '> 180 dias', valor: kpis.aging.acima180, cls: 'bg-neutral-950' },
   ]
+
+  // mapeamento faixa index → params de cobrancas para o aging da carteira
+  const onAgingClick = useCallback((i: number) => {
+    const ranges: ([number, number] | [number, null] | null)[] = [
+      null,           // A vencer → filtro de status
+      [1, 30],
+      [31, 60],
+      [61, 90],
+      [91, 180],
+      [181, null],
+    ]
+    if (i === 0) { router.push('/cobrancas?venc_de=' + DATA_BASE); return }
+    const r = ranges[i]
+    if (!r) return
+    const params = r[1] != null
+      ? `atraso_de=${r[0]}&atraso_ate=${r[1]}`
+      : `atraso_de=${r[0]}`
+    router.push(`/cobrancas?${params}`)
+  }, [router])
 
   function sincronizar() {
     setSyncing(true)
@@ -140,7 +161,7 @@ export default function Dashboard() {
           <Card.Body className="flex grow flex-col">
             {/* espaço para o tooltip da barra — não corta no limite do card */}
             <div className="flex grow flex-col pt-10">
-              <AgingChart faixas={agingFaixas} legendLayout="column" />
+              <AgingChart faixas={agingFaixas} legendLayout="column" onSegmentoClick={onAgingClick} />
             </div>
           </Card.Body>
         </Card>
