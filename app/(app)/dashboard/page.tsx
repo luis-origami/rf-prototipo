@@ -24,6 +24,7 @@ import { InadimplenciaRecuperadoChart } from './_components/InadimplenciaRecuper
 import { PrevistoRecebidoChart } from './_components/PrevistoRecebidoChart'
 import { RecebiveisCard, FAIXAS_RECEBIVEIS } from './_components/RecebiveisCard'
 import { EmpresaSelect } from './_components/EmpresaSelect'
+import { RecebimentoTipoChart } from './_components/RecebimentoTipoChart'
 
 export default function Dashboard() {
   const router = useRouter()
@@ -185,6 +186,19 @@ export default function Dashboard() {
           </Card.Header>
           <Card.Body className="flex grow flex-col justify-center">
             <InadimplenciaRecuperadoChart dados={evolucao} />
+          </Card.Body>
+        </Card>
+      </div>
+
+      {/* recebimento por segmento — ocupa linha inteira para os filtros de tipo */}
+      <div className="mt-6">
+        <Card>
+          <Card.Header>
+            <Card.Title>Recebimento por segmento de cliente</Card.Title>
+            <span className="label-mono text-ink-muted">12 meses · % realização</span>
+          </Card.Header>
+          <Card.Body>
+            <RecebimentoTipoChart />
           </Card.Body>
         </Card>
       </div>

@@ -31,7 +31,18 @@ export const EMPRESA_FILTRO_LABEL: Record<EmpresaFiltro, string> = {
   refor: 'Refordiesel',
 }
 
-export type TipoCliente = 'oficina' | 'transportadora' | 'revenda' | 'frotista' | 'pf'
+export type TipoCliente = 'oficina' | 'transportadora' | 'revenda' | 'frotista' | 'pf' | 'produtor' | 'orgao_publico'
+export type TipoClienteFiltro = 'todos' | 'oficina' | 'frotista' | 'transportadora' | 'produtor' | 'pf' | 'orgao_publico'
+
+export const TIPO_CLIENTE_LABEL: Record<TipoClienteFiltro, string> = {
+  todos: 'Todos',
+  oficina: 'Oficinas mecânicas',
+  frotista: 'Frotistas',
+  transportadora: 'Transportadoras',
+  produtor: 'Produtores rurais',
+  pf: 'Consumidor final',
+  orgao_publico: 'Órgãos públicos',
+}
 export type SituacaoCliente = 'adimplente' | 'atrasado' | 'inadimplente'
 export type StatusBoleto = 'pago' | 'pago_atraso' | 'avencer' | 'hoje' | 'atrasado' | 'inadimplente'
 export type StatusNotificacao = 'agendada' | 'enviada' | 'entregue' | 'lida' | 'respondida'
@@ -943,4 +954,66 @@ export function calcularEncargos(b: Boleto, dataBase: string = DATA_BASE): Encar
   const multa = arred2(b.valor * MULTA_PCT)
   const juros = arred2(b.valor * JUROS_MES_PCT * (dias / 30))
   return { diasAtraso: dias, multa, juros, totalAtualizado: arred2(b.valor + multa + juros), dataBase }
+}
+
+// ── Recebimento por segmento de cliente ──────────────────────────────────
+// Visão do % de realização mês a mês por tipo de cliente. Dado derivado do
+// ERP (read-only) — protótipo usa séries pré-geradas por segmento.
+
+export interface RecebimentoTipoMes {
+  mes: string
+  aReceber: number   // total faturado no mês
+  recebido: number   // confirmado recebido
+  pendente: number   // aReceber - recebido
+  pctRealizacao: number // recebido / aReceber * 100
+}
+
+// [aReceber, recebido] por mês (jul/25 → jun/26)
+const HIST_RECEBIMENTO_TIPO: Record<Exclude<TipoClienteFiltro, 'todos'>, [number, number][]> = {
+  oficina: [
+    [228_000, 191_500], [241_000, 205_000], [235_000, 196_000], [252_000, 211_000],
+    [247_000, 204_000], [261_000, 218_500], [255_000, 209_000], [243_000, 198_000],
+    [258_000, 213_000], [249_000, 207_500], [264_000, 220_000], [42_000, 34_500],
+  ],
+  frotista: [
+    [88_000, 67_500],  [92_000, 69_000],  [95_000, 71_500],  [89_000, 65_500],
+    [97_000, 73_000],  [101_000, 77_500], [86_000, 62_000],  [93_000, 70_000],
+    [99_000, 75_500],  [96_000, 72_000],  [103_000, 79_500], [17_000, 12_500],
+  ],
+  transportadora: [
+    [68_000, 41_500],  [72_000, 44_000],  [74_000, 46_500],  [69_000, 42_000],
+    [76_000, 47_000],  [79_000, 50_500],  [65_000, 39_000],  [71_000, 43_500],
+    [77_000, 48_500],  [74_000, 46_000],  [80_000, 51_000],  [13_000, 8_000],
+  ],
+  produtor: [
+    [32_000, 22_000],  [28_000, 19_000],  [35_000, 24_500],  [38_000, 27_500],
+    [41_000, 29_500],  [37_000, 26_000],  [29_000, 19_500],  [34_000, 23_500],
+    [39_000, 27_000],  [43_000, 31_000],  [36_000, 25_500],  [7_000, 4_500],
+  ],
+  pf: [
+    [17_000, 15_300],  [18_000, 16_200],  [17_500, 15_600],  [19_000, 17_100],
+    [18_500, 16_700],  [20_000, 18_200],  [17_000, 15_100],  [18_500, 16_500],
+    [19_500, 17_600],  [20_500, 18_500],  [19_000, 17_100],  [3_500, 3_100],
+  ],
+  orgao_publico: [
+    [29_000, 14_000],  [31_000, 15_500],  [28_000, 13_000],  [33_000, 16_000],
+    [30_000, 14_500],  [34_000, 17_000],  [27_000, 12_500],  [32_000, 15_000],
+    [35_000, 17_500],  [31_000, 14_500],  [36_000, 18_000],  [6_000, 2_500],
+  ],
+}
+
+const TIPOS_CLIENTE_FILTRO: Exclude<TipoClienteFiltro, 'todos'>[] = [
+  'oficina', 'frotista', 'transportadora', 'produtor', 'pf', 'orgao_publico',
+]
+
+export function getRecebimentosPorTipo(tipo: TipoClienteFiltro): RecebimentoTipoMes[] {
+  const meses = [...MESES_HIST, DATA_BASE.slice(0, 7)]
+  const tipos = tipo === 'todos' ? TIPOS_CLIENTE_FILTRO : [tipo]
+  return meses.map((mes, i) => {
+    const aReceber = tipos.reduce((s, t) => s + HIST_RECEBIMENTO_TIPO[t][i][0], 0)
+    const recebido = tipos.reduce((s, t) => s + HIST_RECEBIMENTO_TIPO[t][i][1], 0)
+    const pendente = aReceber - recebido
+    const pctRealizacao = aReceber > 0 ? Math.round((recebido / aReceber) * 100) : 0
+    return { mes, aReceber, recebido, pendente, pctRealizacao }
+  })
 }

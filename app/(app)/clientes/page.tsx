@@ -28,6 +28,8 @@ const TIPO_LABEL: Record<TipoCliente, string> = {
   revenda: 'Revenda',
   frotista: 'Frotista',
   pf: 'Pessoa física',
+  produtor: 'Produtor rural',
+  orgao_publico: 'Órgão público',
 }
 
 const SIT_OPTIONS: DropdownOption[] = (['adimplente', 'atrasado', 'inadimplente'] as SituacaoCliente[]).map(
