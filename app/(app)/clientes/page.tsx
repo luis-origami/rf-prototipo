@@ -20,7 +20,10 @@ import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
 import { Money } from '../../../components/ui/Money'
 import { ProcessBadge } from '../../../components/ui/ProcessBadge'
+import { NegativadoBadge } from '../../../components/ui/NegativadoBadge'
 import { EmptyState } from '../../../components/ui/EmptyState'
+import { useNegativacoes } from '../../../hooks/useNegativacoes'
+import { isNegativado } from '../../../lib/negativacao'
 
 const TIPO_LABEL: Record<TipoCliente, string> = {
   oficina: 'Oficina',
@@ -52,12 +55,20 @@ const EMPRESA_OPTIONS: DropdownOption[] = empresas.map((e) => ({
   render: () => <Tag variant="source">{e.nome}</Tag>,
 }))
 
+/* negativação — vazio = todos; 'negativado'/'ativo' restringem */
+const NEG_OPTIONS: DropdownOption[] = [
+  { value: 'negativado', label: 'Negativados' },
+  { value: 'ativo', label: 'Não negativados' },
+]
+
 export default function Clientes() {
   const router = useRouter()
+  const negativacoes = useNegativacoes()
   const [query, setQuery] = useState('')
   const [filtroEmpresa, setFiltroEmpresa] = useState<Set<string>>(new Set())
   const [filtroSit, setFiltroSit] = useState<Set<string>>(new Set())
   const [filtroTipo, setFiltroTipo] = useState<Set<string>>(new Set())
+  const [filtroNeg, setFiltroNeg] = useState<Set<string>>(new Set())
 
   const filtrados = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -66,6 +77,12 @@ export default function Clientes() {
         if (filtroEmpresa.size > 0 && !filtroEmpresa.has(getEmpresaDoCliente(c.id))) return false
         if (filtroSit.size > 0 && !filtroSit.has(situacaoEfetiva(c))) return false
         if (filtroTipo.size > 0 && !filtroTipo.has(c.tipo)) return false
+        // negativação: 'negativado' e 'ativo' juntos (ou vazio) = sem filtro
+        if (filtroNeg.size === 1) {
+          const neg = isNegativado(c.id, negativacoes)
+          if (filtroNeg.has('negativado') && !neg) return false
+          if (filtroNeg.has('ativo') && neg) return false
+        }
         if (!q) return true
         return (
           c.nome.toLowerCase().includes(q) ||
@@ -75,7 +92,7 @@ export default function Clientes() {
       })
       // quem deve mais aparece primeiro — a lista já é priorização
       .sort((a, b) => b.saldoAberto - a.saldoAberto)
-  }, [query, filtroEmpresa, filtroSit, filtroTipo])
+  }, [query, filtroEmpresa, filtroSit, filtroTipo, filtroNeg, negativacoes])
 
   const colunas: Column<Cliente>[] = [
     {
@@ -115,9 +132,12 @@ export default function Clientes() {
     {
       key: 'proc',
       header: 'Processo',
-      sortValue: (c) => c.estadoProcesso,
+      // negativados primeiro; depois pelos demais estados de processo
+      sortValue: (c) => (isNegativado(c.id, negativacoes) ? '0_negativado' : c.estadoProcesso),
       render: (c) =>
-        c.estadoProcesso === 'normal' ? (
+        isNegativado(c.id, negativacoes) ? (
+          <NegativadoBadge />
+        ) : c.estadoProcesso === 'normal' ? (
           <span className="text-ink-muted">—</span>
         ) : (
           <ProcessBadge estado={c.estadoProcesso} />
@@ -157,6 +177,12 @@ export default function Clientes() {
           onChange={setFiltroTipo}
           options={TIPO_OPTIONS}
           placeholder="Tipo"
+        />
+        <MultiSelectDropdown
+          selected={filtroNeg}
+          onChange={setFiltroNeg}
+          options={NEG_OPTIONS}
+          placeholder="Negativação"
         />
         <span className="num ml-auto font-mono text-xs text-ink-muted">{filtrados.length} clientes</span>
       </div>
