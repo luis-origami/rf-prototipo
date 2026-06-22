@@ -8,7 +8,7 @@ import {
   getClienteById,
 } from '../../../mocks'
 import { abonosDoBoleto, valorFinalDoBoleto } from '../../../lib/abonos'
-import { type RetornoManualNegociacao } from '../../../lib/negociacoes'
+import { type RetornoManualNegociacao, type SituacaoNegociacao } from '../../../lib/negociacoes'
 import { useAbonos } from '../../../hooks/useAbonos'
 import { useNegociacoes } from '../../../hooks/useNegociacoes'
 import { getSession, getUsuarios, podeAcessar } from '../../../lib/auth'
@@ -18,7 +18,7 @@ import { Input } from '../../../components/ui/Input'
 import { Button } from '../../../components/ui/Button'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { EmptyState } from '../../../components/ui/EmptyState'
-import { EstadoAbonoBadge } from '../../../components/abonos/EstadoAbonoBadge'
+import { SituacaoNegociacaoBadge } from '../../../components/abonos/SituacaoNegociacaoBadge'
 import { Money } from '../../../components/ui/Money'
 import { MultiSelectDropdown, type DropdownOption } from '../../../components/ui/MultiSelectDropdown'
 
@@ -38,6 +38,13 @@ const ABONO_OPTIONS: DropdownOption[] = [
   { value: 'com_abono', label: 'Com abono' },
   { value: 'sem_abono', label: 'Sem abono' },
 ]
+
+// ordenação da coluna Estado: aberta → descumprida → retornada
+const ORDEM_SITUACAO: Record<SituacaoNegociacao, number> = {
+  aberta: 0,
+  descumprida: 1,
+  retornada: 2,
+}
 
 export default function Negociacoes() {
   const router = useRouter()
@@ -161,20 +168,8 @@ export default function Negociacoes() {
       key: 'estado',
       header: 'Estado',
       center: true,
-      sortValue: (r) => {
-        const abs = abonosDoBoleto(r.boletoId, abonos)
-        return abs.length > 0 ? abs[0].estado : 'z'
-      },
-      render: (r) => {
-        const abono =
-          abonosDoBoleto(r.boletoId, abonos).find((a) => a.estado === 'ativo') ??
-          abonosDoBoleto(r.boletoId, abonos)[0]
-        return abono ? (
-          <EstadoAbonoBadge estado={abono.estado} />
-        ) : (
-          <span className="text-ink-muted">—</span>
-        )
-      },
+      sortValue: (r) => ORDEM_SITUACAO[r.situacao ?? 'retornada'],
+      render: (r) => <SituacaoNegociacaoBadge situacao={r.situacao ?? 'retornada'} />,
     },
     {
       key: 'por',
@@ -189,7 +184,7 @@ export default function Negociacoes() {
       <PageHeader
         eyebrow="Supervisão"
         title="Negociações"
-        description="Retornos manuais à régua registrados pela operação — cobrança descongelada antes dos 2 dias úteis de carência."
+        description="Negociações com promessa de pagamento — em aberto, descumpridas pelo cliente e retornos manuais à régua."
       />
 
       <div className="flex flex-wrap items-center gap-3">

@@ -253,9 +253,15 @@ export function resolverNegociacao(
   const { data, situacao } = comPromessa[0].promessaPagamento!
   const ultimaDataHora = comPromessa[0].dataHora
 
-  // retorno manual registrado após a última comunicação encerra a negociação
+  // retorno manual registrado após a última comunicação encerra a negociação.
+  // Só registros 'retornada' encerram — 'aberta'/'descumprida' são entradas de
+  // supervisão (exibição) e não devem mexer na derivação do board.
   const retornado = retornosManual.some(
-    (r) => r.boletoId === boletoId && r.promessaData === data && r.retornadoEm > ultimaDataHora,
+    (r) =>
+      r.boletoId === boletoId &&
+      r.promessaData === data &&
+      r.retornadoEm > ultimaDataHora &&
+      (r.situacao ?? 'retornada') === 'retornada',
   )
   if (retornado) {
     return { emNegociacao: false, promessaQuebrada: false, promessaData: data, periodoGraca: false }
