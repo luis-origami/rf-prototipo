@@ -29,7 +29,7 @@ import {
   getNegativacao,
   negativarCliente,
   reverterNegativacao,
-  baixarDossieNegativacao,
+  baixarHistoricoNegativacao,
 } from '../../../../lib/negativacao'
 import { Button } from '../../../../components/ui/Button'
 import { Card } from '../../../../components/ui/Card'
@@ -50,7 +50,7 @@ import { type EtapaFormValues } from '../../../../components/notificacoes/NovaEt
 import { DataTable, type Column } from '../../../../components/ui/DataTable'
 import { EmptyState } from '../../../../components/ui/EmptyState'
 import { useToast } from '../../../../hooks/useToast'
-import { IconChevronLeft, IconPause, IconPlay, IconZap, IconBan, IconPlus, IconDownload } from '../../../../components/icons'
+import { IconChevronLeft, IconPause, IconPlay, IconBan, IconPlus, IconDownload } from '../../../../components/icons'
 import { ReguaTimeline } from './_components/ReguaTimeline'
 import { ComunicacaoItem } from '../../../../components/comunicacoes/ComunicacaoItem'
 import { ComunicacaoForm, type ComunicacaoFormValues } from './_components/ComunicacaoForm'
@@ -137,12 +137,6 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
     toast(proxima === 'pausado' ? 'Régua pausada.' : 'Régua retomada.')
   }
 
-  function alternarExcecao() {
-    const proxima = estadoProcesso === 'excecao' ? 'normal' : 'excecao'
-    setEstadoProcesso(proxima)
-    toast(proxima === 'excecao' ? 'Exceção manual registrada.' : 'Exceção revertida.')
-  }
-
   function abrirNegativacao() {
     setMotivoNeg('')
     setModalNegativar(true)
@@ -152,15 +146,15 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
     const negativadoPor = sessao?.email ?? 'financeiro@retifica.com'
     const motivo = motivoNeg.trim() || undefined
     const registro = negativarCliente({ clienteId: id, negativadoPor, motivo })
-    // gera o dossiê com o histórico completo do cliente para instruir a
-    // negativação (executada fora do sistema)
-    baixarDossieNegativacao(id, {
+    // gera o histórico completo do cliente para instruir a negativação
+    // (executada fora do sistema)
+    baixarHistoricoNegativacao(id, {
       negativadoPor: registro.negativadoPor,
       negativadoEm: registro.negativadoEm,
       motivo: registro.motivo,
     })
     setModalNegativar(false)
-    toast('Cliente negativado · régua pausada e dossiê gerado.')
+    toast('Cliente negativado · régua pausada e histórico gerado.')
   }
 
   function reverter() {
@@ -168,13 +162,13 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
     toast('Negativação revertida · régua liberada para automação.')
   }
 
-  function baixarDossie() {
-    baixarDossieNegativacao(id, {
+  function baixarHistorico() {
+    baixarHistoricoNegativacao(id, {
       negativadoPor: registroNeg?.negativadoPor,
       negativadoEm: registroNeg?.negativadoEm,
       motivo: registroNeg?.motivo,
     })
-    toast('Dossiê de negativação gerado.')
+    toast('Histórico de negativação gerado.')
   }
 
   function confirmarTrocaRegua() {
@@ -389,7 +383,7 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
 
       {/* ações do processo — destrutiva isolada à direita (DS v5 slide 13).
           Negativado: automação desligada (tratativa 100% humana) — só restam
-          gerar o dossiê e reverter. */}
+          gerar o histórico e reverter. */}
       {podeOperarRegua && (
         <div className="mt-5 flex flex-wrap items-center gap-2 border-y border-line py-3">
           {negativado ? (
@@ -398,9 +392,9 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
                 <IconBan size={13} className="shrink-0" />
                 Régua pausada por negativação · tratativa manual
               </span>
-              <Button variant="secondary" size="sm" onClick={baixarDossie}>
+              <Button variant="secondary" size="sm" onClick={baixarHistorico}>
                 <IconDownload size={14} />
-                Baixar dossiê
+                Baixar histórico
               </Button>
               <span className="ml-auto">
                 <Button variant="secondary" size="sm" onClick={reverter}>
@@ -414,10 +408,6 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
               <Button variant="secondary" size="sm" onClick={alternarPausa}>
                 {pausada ? <IconPlay size={14} /> : <IconPause size={14} />}
                 {pausada ? 'Retomar régua' : 'Pausar régua'}
-              </Button>
-              <Button variant="secondary" size="sm" onClick={alternarExcecao}>
-                <IconZap size={14} />
-                {estadoProcesso === 'excecao' ? 'Reverter exceção' : 'Marcar exceção'}
               </Button>
               <Button variant="secondary" size="sm" onClick={() => { setReguaPendente(reguaId); setModalRegua(true) }}>
                 Trocar régua
@@ -562,14 +552,14 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
           <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-neutral-700">
             <li>a régua de cobrança é <b>pausada por completo</b> — nenhum envio automático;</li>
             <li>a tratativa passa a ser <b>100% humana</b> (só contatos manuais seguem);</li>
-            <li>é gerado um <b>dossiê</b> com o histórico completo do cliente para instruir a negativação.</li>
+            <li>é gerado um <b>histórico</b> completo do cliente para instruir a negativação.</li>
           </ul>
           <div className="mt-4">
             <Field label="Motivo (opcional)">
               <Textarea
                 value={motivoNeg}
                 onChange={(e) => setMotivoNeg(e.target.value)}
-                placeholder="Descreva o motivo da negativação — consta no dossiê…"
+                placeholder="Descreva o motivo da negativação — consta no histórico…"
                 rows={3}
               />
             </Field>
@@ -581,7 +571,7 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
           </Button>
           <Button variant="destructive" onClick={confirmarNegativacao}>
             <IconBan size={14} />
-            Negativar e gerar dossiê
+            Negativar e gerar histórico
           </Button>
         </Modal.Footer>
       </Modal>

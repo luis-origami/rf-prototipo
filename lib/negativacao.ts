@@ -6,8 +6,8 @@
 //   • o cliente recebe o selo "Negativado" (lista e detalhe);
 //   • a régua de cobrança é pausada por completo — nenhum envio automático;
 //   • a tratativa passa a ser 100% humana (só contatos manuais seguem).
-// O sistema apenas gera um dossiê com o histórico completo do cliente para
-// instruir a negativação fora do sistema.
+// O sistema apenas gera um histórico completo do cliente para instruir a
+// negativação fora do sistema.
 
 import {
   getBoletosDoCliente,
@@ -33,7 +33,7 @@ const LS_KEY = 'rf_negativacoes'
 const LS_VERSION = 'rf_negativacoes_v1'
 
 // Seed de teste — um cliente já negativado para exercitar selo, filtro,
-// coluna Processo e dossiê sem precisar negativar na mão.
+// coluna Processo e histórico sem precisar negativar na mão.
 export const NEGATIVACOES_SEED: RegistroNegativacao[] = [
   {
     clienteId: 'c03',
@@ -128,7 +128,7 @@ export function reverterNegativacao(clienteId: string): void {
   salvar(lerNegativacoes().filter((n) => n.clienteId !== clienteId))
 }
 
-// ── Dossiê de negativação ──────────────────────────────────────────────────
+// ── Histórico de negativação ───────────────────────────────────────────────
 // Documento autônomo (HTML imprimível) com o histórico completo do cliente:
 // contatos realizados, boletos em atraso, promessas não efetivadas e dados
 // pertinentes. Serve de instrução para a negativação, que é externa ao sistema.
@@ -165,7 +165,7 @@ function totalAtualizado(b: Boleto): number {
   return calcularEncargos(b)?.totalAtualizado ?? b.valor
 }
 
-export function gerarDossieNegativacaoHTML(
+export function gerarHistoricoNegativacaoHTML(
   clienteId: string,
   meta?: { negativadoPor?: string; negativadoEm?: string; motivo?: string },
 ): string {
@@ -231,7 +231,7 @@ export function gerarDossieNegativacaoHTML(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dossiê de Negativação · ${esc(cliente.nome)}</title>
+<title>Histórico de Negativação · ${esc(cliente.nome)}</title>
 <style>
   :root { --ink:#1a2230; --muted:#5b6677; --line:#d8dee8; --line2:#eef1f6; --red:#b42318; --redbg:#fef3f2; }
   * { box-sizing: border-box; }
@@ -271,7 +271,7 @@ export function gerarDossieNegativacaoHTML(
   <div class="topo">
     <div>
       <p class="eyebrow">Retífica Formiguense · Cobrança RF</p>
-      <h1>Dossiê de Negativação</h1>
+      <h1>Histórico de Negativação</h1>
       <p class="muted">Documento de instrução — a negativação é processada fora do sistema.</p>
     </div>
     <span class="selo">Negativado</span>
@@ -322,8 +322,8 @@ export function gerarDossieNegativacaoHTML(
 </html>`
 }
 
-/** gera o dossiê e dispara o download do arquivo HTML (somente no browser) */
-export function baixarDossieNegativacao(
+/** gera o histórico e dispara o download do arquivo HTML (somente no browser) */
+export function baixarHistoricoNegativacao(
   clienteId: string,
   meta?: { negativadoPor?: string; negativadoEm?: string; motivo?: string },
 ): void {
@@ -335,12 +335,12 @@ export function baixarDossieNegativacao(
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
-  const html = gerarDossieNegativacaoHTML(clienteId, meta)
+  const html = gerarHistoricoNegativacaoHTML(clienteId, meta)
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `dossie-negativacao-${slug}.html`
+  a.download = `historico-negativacao-${slug}.html`
   document.body.appendChild(a)
   a.click()
   a.remove()
