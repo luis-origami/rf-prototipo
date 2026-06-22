@@ -22,7 +22,9 @@ import {
   type StatusBoleto,
 } from '../../../mocks'
 import { abonoAplicadoDoBoleto, abonaJuros, abonaMulta, processarAbonoDaComunicacao } from '../../../lib/abonos'
+import { registrarRetornoManual } from '../../../lib/negociacoes'
 import { useAbonos } from '../../../hooks/useAbonos'
+import { useNegociacoes } from '../../../hooks/useNegociacoes'
 import { colunaDoBoleto } from '../../../lib/kanban'
 import { useColunasKanban } from '../../../hooks/useColunasKanban'
 import { getSession, podeAcessar } from '../../../lib/auth'
@@ -38,6 +40,8 @@ import { Input } from '../../../components/ui/Input'
 import { Button } from '../../../components/ui/Button'
 import { Modal } from '../../../components/ui/Modal'
 import { EmptyState } from '../../../components/ui/EmptyState'
+import { Field } from '../../../components/ui/Field'
+import { Textarea } from '../../../components/ui/Textarea'
 import { useToast } from '../../../hooks/useToast'
 import { IconKanban, IconSettings, IconTable } from '../../../components/icons'
 import { KanbanBoard } from './_components/KanbanBoard'
@@ -98,6 +102,7 @@ function CobrancasContent() {
   const atrasoAteUrl = searchParams.get('atraso_ate') ?? ''
 
   const abonos = useAbonos()
+  const retornosManual = useNegociacoes()
   const colunasKanban = useColunasKanban()
   const { toast, toastHost } = useToast()
   const sessao = getSession()
@@ -120,6 +125,10 @@ function CobrancasContent() {
   // indicador dos cards (estado de processo, nada grava no Certtus)
   const [comunicacoesExtras, setComunicacoesExtras] = useState<Comunicacao[]>([])
   const [comBoleto, setComBoleto] = useState<Boleto | null>(null)
+
+  // retorno manual à régua — confirmação antes de encerrar a negociação
+  const [retornoTarget, setRetornoTarget] = useState<{ boleto: Boleto; promessaData: string } | null>(null)
+  const [retornoMotivo, setRetornoMotivo] = useState('')
 
   const filtradas = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -217,6 +226,24 @@ function CobrancasContent() {
     ])
     setComBoleto(null)
     toast(values.abono ? 'Contato registrado com abono vinculado.' : 'Contato registrado.')
+  }
+
+  function handleRetornarRegua(boleto: Boleto, promessaData: string) {
+    setRetornoTarget({ boleto, promessaData })
+    setRetornoMotivo('')
+  }
+
+  function confirmarRetorno() {
+    if (!retornoTarget) return
+    registrarRetornoManual({
+      boletoId: retornoTarget.boleto.id,
+      promessaData: retornoTarget.promessaData,
+      motivoRetorno: retornoMotivo || undefined,
+      retornadoPor: sessao?.email ?? 'financeiro@retifica.com',
+    })
+    setRetornoTarget(null)
+    setRetornoMotivo('')
+    toast('Cobrança retornada à régua. Envios automáticos reativados.')
   }
 
   const clienteCom = comBoleto ? getClienteById(comBoleto.clienteId) : null
@@ -480,8 +507,10 @@ function CobrancasContent() {
             colunas={colunasKanban}
             comunicacoesDoBoleto={contarComunicacoes}
             todasComunicacoes={todasComunicacoesKanban}
+            retornosManual={retornosManual}
             onAbrir={(b) => router.push(`/cobrancas/${b.id}`)}
             onRegistrarComunicacao={podeComunicar ? setComBoleto : undefined}
+            onRetornarRegua={podeComunicar ? handleRetornarRegua : undefined}
           />
         )}
       </div>
@@ -501,6 +530,46 @@ function CobrancasContent() {
             />
           )}
         </Modal.Body>
+      </Modal>
+
+      {/* confirmação de retorno manual à régua */}
+      <Modal open={retornoTarget != null} onClose={() => setRetornoTarget(null)}>
+        <Modal.Header>Retornar à régua</Modal.Header>
+        <Modal.Body>
+          {retornoTarget && (() => {
+            const cliente = getClienteById(retornoTarget.boleto.clienteId)
+            const boleto = retornoTarget.boleto
+            return (
+              <>
+                <p className="text-sm text-neutral-700">
+                  Os envios automáticos da cobrança de{' '}
+                  <span className="font-semibold text-ink">{cliente?.nome ?? '—'}</span>{' '}
+                  (boleto <span className="num font-mono">{boleto.numero}</span>) serão reativados
+                  imediatamente. A promessa de pagamento de{' '}
+                  <span className="num font-mono">{retornoTarget.promessaData}</span> será encerrada.
+                </p>
+                <div className="mt-4">
+                  <Field label="Motivo (opcional)">
+                    <Textarea
+                      value={retornoMotivo}
+                      onChange={(e) => setRetornoMotivo(e.target.value)}
+                      placeholder="Descreva o motivo do retorno antecipado…"
+                      rows={3}
+                    />
+                  </Field>
+                </div>
+              </>
+            )
+          })()}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="ghost" onClick={() => setRetornoTarget(null)}>
+            Cancelar
+          </Button>
+          <Button variant="primary" onClick={confirmarRetorno}>
+            Confirmar retorno
+          </Button>
+        </Modal.Footer>
       </Modal>
 
       {toastHost}

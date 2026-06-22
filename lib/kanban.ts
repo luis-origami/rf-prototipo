@@ -12,6 +12,7 @@
 
 import { ancoraParaDias, diasEntre, DATA_BASE, type Boleto, type Comunicacao } from '../mocks'
 import { lerReguas } from './reguasStore'
+import type { RetornoManualNegociacao } from './negociacoes'
 
 export interface ColunaKanban {
   id: string
@@ -205,31 +206,73 @@ export function proximaColuna(coluna: ColunaKanban, colunas: ColunaKanban[]): Co
 // ── Negociação ────────────────────────────────────────────────────────────
 // Uma cobrança entra em "Negociações" quando a comunicação mais recente com
 // promessaPagamento.data registrada tem data futura e situação pendente.
-// Se a data passou e o título continua em aberto, a promessa está quebrada:
-// o card exibe o badge e sobe uma coluna na régua (penalidade de processo).
+// Após a data expirar, o card permanece na coluna por 2 dias úteis (carência)
+// antes de sair com badge de promessa quebrada e avançar uma coluna.
+// Retorno manual antes da carência encerra a negociação imediatamente.
+// Pagamento reconhecido no Certtus (status pago/pago_atraso) retira o título
+// da régua naturalmente — já filtrado antes de chegar aqui.
+
+/** dias úteis decorridos após 'desde' até 'ate' (exclusive desde, inclusive ate) */
+function diasUteisDecorridos(desde: string, ate: string): number {
+  const start = new Date(desde + 'T00:00:00')
+  const end = new Date(ate + 'T00:00:00')
+  if (end <= start) return 0
+  let count = 0
+  const cursor = new Date(start)
+  cursor.setDate(cursor.getDate() + 1)
+  while (cursor <= end) {
+    const day = cursor.getDay()
+    if (day !== 0 && day !== 6) count++
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return count
+}
 
 export interface NegociacaoStatus {
-  emNegociacao: boolean      // aguardando promessa futura → coluna Negociações
-  promessaQuebrada: boolean  // data passou, não pagou → badge + próxima coluna
+  emNegociacao: boolean      // aguardando promessa → coluna Negociações
+  promessaQuebrada: boolean  // carência esgotada, não pagou → badge + próxima coluna
   promessaData: string | null
+  /** promessa expirou mas ainda dentro dos 2 dias úteis de carência */
+  periodoGraca: boolean
 }
 
 /** resolve o estado de negociação de um boleto a partir das suas comunicações */
 export function resolverNegociacao(
   boletoId: string,
   comunicacoes: Comunicacao[],
+  retornosManual: RetornoManualNegociacao[] = [],
 ): NegociacaoStatus {
   const comPromessa = comunicacoes
     .filter((c) => c.boletoIds?.includes(boletoId) && c.promessaPagamento?.data)
     .sort((a, b) => b.dataHora.localeCompare(a.dataHora))
 
   if (!comPromessa.length) {
-    return { emNegociacao: false, promessaQuebrada: false, promessaData: null }
+    return { emNegociacao: false, promessaQuebrada: false, promessaData: null, periodoGraca: false }
   }
 
   const { data, situacao } = comPromessa[0].promessaPagamento!
-  const quebrada = situacao === 'quebrada' || (situacao === 'pendente' && data <= DATA_BASE)
-  const ativa    = situacao === 'pendente' && data > DATA_BASE
+  const ultimaDataHora = comPromessa[0].dataHora
 
-  return { emNegociacao: ativa, promessaQuebrada: quebrada, promessaData: data }
+  // retorno manual registrado após a última comunicação encerra a negociação
+  const retornado = retornosManual.some(
+    (r) => r.boletoId === boletoId && r.promessaData === data && r.retornadoEm > ultimaDataHora,
+  )
+  if (retornado) {
+    return { emNegociacao: false, promessaQuebrada: false, promessaData: data, periodoGraca: false }
+  }
+
+  if (situacao === 'quebrada') {
+    return { emNegociacao: false, promessaQuebrada: true, promessaData: data, periodoGraca: false }
+  }
+
+  if (situacao === 'pendente' && data > DATA_BASE) {
+    return { emNegociacao: true, promessaQuebrada: false, promessaData: data, periodoGraca: false }
+  }
+
+  // promessa vencida (data <= DATA_BASE) — 2 dias úteis de carência antes de sair
+  const diasDecorridos = diasUteisDecorridos(data, DATA_BASE)
+  if (diasDecorridos <= 2) {
+    return { emNegociacao: true, promessaQuebrada: false, promessaData: data, periodoGraca: true }
+  }
+  return { emNegociacao: false, promessaQuebrada: true, promessaData: data, periodoGraca: false }
 }

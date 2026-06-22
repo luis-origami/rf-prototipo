@@ -4,159 +4,183 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   formatarData,
-  formatarMoeda,
   getBoletoById,
   getClienteById,
-  type EstadoAbono,
 } from '../../../mocks'
-import { type Abono } from '../../../lib/abonos'
+import { abonosDoBoleto, valorFinalDoBoleto } from '../../../lib/abonos'
+import { type RetornoManualNegociacao } from '../../../lib/negociacoes'
 import { useAbonos } from '../../../hooks/useAbonos'
-import { getSession, podeAcessar } from '../../../lib/auth'
+import { useNegociacoes } from '../../../hooks/useNegociacoes'
+import { getSession, getUsuarios, podeAcessar } from '../../../lib/auth'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { SearchInput } from '../../../components/ui/SearchInput'
 import { Input } from '../../../components/ui/Input'
-import { Tabs, type TabItem } from '../../../components/ui/Tabs'
+import { Button } from '../../../components/ui/Button'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { EstadoAbonoBadge } from '../../../components/abonos/EstadoAbonoBadge'
 import { Money } from '../../../components/ui/Money'
+import { MultiSelectDropdown, type DropdownOption } from '../../../components/ui/MultiSelectDropdown'
 
-/* Visão consolidada de abonos — supervisão a posteriori do admin (substitui
-   a aprovação prévia, que não existe por decisão do PO). Lista filtrável por
-   período, cliente e estado; clicar abre o detalhamento completo. */
+/* Histórico de negociações — retornos manuais à régua registrados pela
+   operação. Supervisão a posteriori do admin. */
 
-type TabId = 'ativo' | 'expirado' | 'aplicado' | 'cancelado' | 'todos'
-
-const ORDEM_ESTADO: Record<EstadoAbono, number> = {
-  ativo: 0,
-  aplicado: 1,
-  expirado: 2,
-  cancelado: 3,
-}
-
-function clienteDoAbono(a: Abono) {
-  const boleto = getBoletoById(a.boletoIds[0])
+function clienteDoRetorno(r: RetornoManualNegociacao) {
+  const boleto = getBoletoById(r.boletoId)
   return boleto ? getClienteById(boleto.clienteId) : undefined
 }
 
-export default function Abonos() {
+function nomeDoUsuario(email: string): string {
+  return getUsuarios().find((u) => u.email === email)?.nome ?? email
+}
+
+const ABONO_OPTIONS: DropdownOption[] = [
+  { value: 'com_abono', label: 'Com abono' },
+  { value: 'sem_abono', label: 'Sem abono' },
+]
+
+export default function Negociacoes() {
   const router = useRouter()
   const sessao = getSession()
   const perfil = sessao?.perfil ?? 'comercial'
   const podeSupervisao = podeAcessar(perfil, 'abonosSupervisao')
 
   const abonos = useAbonos()
-  const [tab, setTab] = useState<TabId>('todos')
+  const retornos = useNegociacoes()
   const [query, setQuery] = useState('')
   const [de, setDe] = useState('')
   const [ate, setAte] = useState('')
+  const [abonoFiltro, setAbonoFiltro] = useState<Set<string>>(new Set())
 
-  const filtrados = useMemo(() => {
+  const retornosFiltrados = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return abonos
-      .filter((a) => {
-        if (tab !== 'todos' && a.estado !== tab) return false
-        const dia = a.criadoEm.slice(0, 10)
+    return [...retornos]
+      .sort((a, b) => b.retornadoEm.localeCompare(a.retornadoEm))
+      .filter((r) => {
+        const dia = r.retornadoEm.slice(0, 10)
         if (de && dia < de) return false
         if (ate && dia > ate) return false
-        if (!q) return true
-        const cliente = clienteDoAbono(a)
-        return (
-          a.boletoIds.some((id) => getBoletoById(id)?.numero.toLowerCase().includes(q)) ||
-          (cliente?.nome.toLowerCase().includes(q) ?? false)
-        )
+
+        if (q) {
+          const cliente = clienteDoRetorno(r)
+          const boleto = getBoletoById(r.boletoId)
+          const bate =
+            (cliente?.nome.toLowerCase().includes(q) ?? false) ||
+            (boleto?.numero.toLowerCase().includes(q) ?? false)
+          if (!bate) return false
+        }
+
+        if (abonoFiltro.size > 0) {
+          const temAbono = abonosDoBoleto(r.boletoId, abonos).some(
+            (a) => a.jurosAbonado + a.multaAbonada > 0,
+          )
+          if (abonoFiltro.has('com_abono') && abonoFiltro.has('sem_abono')) return true
+          if (abonoFiltro.has('com_abono') && !temAbono) return false
+          if (abonoFiltro.has('sem_abono') && temAbono) return false
+        }
+
+        return true
       })
-      .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
-  }, [abonos, tab, query, de, ate])
+  }, [retornos, abonos, query, de, ate, abonoFiltro])
 
   if (!podeSupervisao) {
     return (
       <EmptyState
         title="Acesso restrito"
-        description="A visão consolidada de abonos é do perfil admin — supervisão a posteriori."
+        description="A visão de negociações é do perfil admin — supervisão a posteriori."
       />
     )
   }
 
-  const porEstado = (e: EstadoAbono) => abonos.filter((a) => a.estado === e)
-
-  const tabs: TabItem<TabId>[] = [
-    { id: 'todos', label: 'Todos', count: abonos.length },
-    { id: 'ativo', label: 'Ativos', count: porEstado('ativo').length },
-    { id: 'expirado', label: 'Expirados', count: porEstado('expirado').length },
-    { id: 'aplicado', label: 'Aplicados', count: porEstado('aplicado').length },
-    { id: 'cancelado', label: 'Cancelados', count: porEstado('cancelado').length },
-  ]
-
-  const colunas: Column<Abono>[] = [
+  const colunas: Column<RetornoManualNegociacao>[] = [
     {
       key: 'criado',
       header: 'Criado em',
       numeric: true,
-      sortValue: (a) => a.criadoEm,
-      render: (a) => formatarData(a.criadoEm.slice(0, 10)),
+      sortValue: (r) => r.retornadoEm,
+      render: (r) => formatarData(r.retornadoEm.slice(0, 10)),
     },
     {
       key: 'cliente',
       header: 'Cliente',
-      sortValue: (a) => clienteDoAbono(a)?.nome ?? '',
-      render: (a) => <span className="font-medium text-ink">{clienteDoAbono(a)?.nome ?? '—'}</span>,
+      sortValue: (r) => clienteDoRetorno(r)?.nome ?? '',
+      render: (r) => <span className="font-medium text-ink">{clienteDoRetorno(r)?.nome ?? '—'}</span>,
     },
     {
       key: 'titulos',
       header: 'Títulos',
       certtus: true,
-      sortValue: (a) => a.boletoIds.length,
-      render: (a) => {
-        const primeiro = getBoletoById(a.boletoIds[0])
-        return (
-          <span className="num whitespace-nowrap font-mono text-neutral-700">
-            {primeiro?.numero ?? '—'}
-            {a.boletoIds.length > 1 && (
-              <span className="ml-1.5 text-ink-muted">+{a.boletoIds.length - 1}</span>
-            )}
-          </span>
-        )
+      sortValue: (r) => r.boletoId,
+      render: (r) => {
+        const b = getBoletoById(r.boletoId)
+        return <span className="num whitespace-nowrap font-mono text-neutral-700">{b?.numero ?? r.boletoId}</span>
       },
     },
     {
       key: 'abonado',
       header: 'Abonado',
       numeric: true,
-      sortValue: (a) => a.jurosAbonado + a.multaAbonada,
-      render: (a) => <Money value={a.jurosAbonado + a.multaAbonada} />,
+      sortValue: (r) =>
+        abonosDoBoleto(r.boletoId, abonos).reduce((s, a) => s + a.jurosAbonado + a.multaAbonada, 0),
+      render: (r) => {
+        const total = abonosDoBoleto(r.boletoId, abonos).reduce(
+          (s, a) => s + a.jurosAbonado + a.multaAbonada,
+          0,
+        )
+        return total > 0 ? <Money value={total} /> : <span className="text-ink-muted">—</span>
+      },
     },
     {
       key: 'final',
       header: 'Valor final',
       numeric: true,
-      sortValue: (a) => a.valorFinal,
-      render: (a) => <Money value={a.valorFinal} />,
+      sortValue: (r) => {
+        const boleto = getBoletoById(r.boletoId)
+        const abono = abonosDoBoleto(r.boletoId, abonos).find((a) => a.estado === 'ativo')
+        return abono
+          ? (valorFinalDoBoleto(r.boletoId, abono) ?? boleto?.valor ?? 0)
+          : (boleto?.valor ?? 0)
+      },
+      render: (r) => {
+        const boleto = getBoletoById(r.boletoId)
+        const abono = abonosDoBoleto(r.boletoId, abonos).find((a) => a.estado === 'ativo')
+        const valor = abono
+          ? (valorFinalDoBoleto(r.boletoId, abono) ?? boleto?.valor)
+          : boleto?.valor
+        return valor != null ? <Money value={valor} /> : <span className="text-ink-muted">—</span>
+      },
     },
     {
       key: 'validade',
       header: 'Validade',
       numeric: true,
-      sortValue: (a) => a.dataPromessaPagamento ?? '',
-      render: (a) =>
-        a.dataPromessaPagamento ? (
-          formatarData(a.dataPromessaPagamento)
-        ) : (
-          <span className="text-ink-muted">—</span>
-        ),
+      sortValue: (r) => r.promessaData,
+      render: (r) => formatarData(r.promessaData),
     },
     {
       key: 'estado',
       header: 'Estado',
       center: true,
-      sortValue: (a) => ORDEM_ESTADO[a.estado],
-      render: (a) => <EstadoAbonoBadge estado={a.estado} />,
+      sortValue: (r) => {
+        const abs = abonosDoBoleto(r.boletoId, abonos)
+        return abs.length > 0 ? abs[0].estado : 'z'
+      },
+      render: (r) => {
+        const abono =
+          abonosDoBoleto(r.boletoId, abonos).find((a) => a.estado === 'ativo') ??
+          abonosDoBoleto(r.boletoId, abonos)[0]
+        return abono ? (
+          <EstadoAbonoBadge estado={abono.estado} />
+        ) : (
+          <span className="text-ink-muted">—</span>
+        )
+      },
     },
     {
       key: 'por',
       header: 'Criado por',
-      sortValue: (a) => a.criadoPor,
-      render: (a) => <span className="font-mono text-xs text-ink-muted">{a.criadoPor}</span>,
+      sortValue: (r) => nomeDoUsuario(r.retornadoPor),
+      render: (r) => <span className="text-sm text-ink-muted">{nomeDoUsuario(r.retornadoPor)}</span>,
     },
   ]
 
@@ -164,58 +188,70 @@ export default function Abonos() {
     <>
       <PageHeader
         eyebrow="Supervisão"
-        title="Abonos de encargos"
-        description="Todos os abonos concedidos pela operação — criação direta, sem aprovação prévia; o controle é esta trilha. Clique para ver o detalhamento completo."
+        title="Negociações"
+        description="Retornos manuais à régua registrados pela operação — cobrança descongelada antes dos 2 dias úteis de carência."
       />
 
       <div className="flex flex-wrap items-center gap-3">
         <SearchInput
           value={query}
           onChange={setQuery}
-          placeholder="Cliente ou título…"
-          className="w-full sm:w-72"
+          placeholder="Cliente ou boleto…"
+          className="w-full sm:w-64"
+        />
+        <MultiSelectDropdown
+          selected={abonoFiltro}
+          onChange={setAbonoFiltro}
+          options={ABONO_OPTIONS}
+          placeholder="Abono"
         />
         <div className="flex items-center gap-2">
-          <label className="label-mono text-ink-muted" htmlFor="abono-de">
-            Criado entre
+          <label className="label-mono text-ink-muted" htmlFor="neg-de">
+            Período
           </label>
           <Input
-            id="abono-de"
+            id="neg-de"
             type="date"
-            aria-label="Criação — data inicial"
+            aria-label="Período — data inicial"
             value={de}
             onChange={(e) => setDe(e.target.value)}
             className="w-40"
           />
-          <span className="text-sm text-ink-muted">e</span>
+          <span className="text-sm text-ink-muted">a</span>
           <Input
             type="date"
-            aria-label="Criação — data final"
+            aria-label="Período — data final"
             value={ate}
             onChange={(e) => setAte(e.target.value)}
             className="w-40"
           />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { setDe(''); setAte('') }}
+            className={(de || ate) ? '' : 'invisible'}
+            aria-hidden={!(de || ate)}
+            tabIndex={(de || ate) ? undefined : -1}
+          >
+            Limpar
+          </Button>
         </div>
         <span className="num ml-auto font-mono text-xs text-ink-muted">
-          {filtrados.length} {filtrados.length === 1 ? 'abono' : 'abonos'} ·{' '}
-          {formatarMoeda(filtrados.reduce((s, a) => s + a.jurosAbonado + a.multaAbonada, 0))} abonados
+          {retornosFiltrados.length}{' '}
+          {retornosFiltrados.length === 1 ? 'negociação' : 'negociações'}
         </span>
-      </div>
-
-      <div className="mt-4">
-        <Tabs items={tabs} value={tab} onChange={setTab} />
       </div>
 
       <div className="mt-4">
         <DataTable
           columns={colunas}
-          rows={filtrados}
-          rowKey={(a) => a.id}
-          onRowClick={(a) => router.push(`/abonos/${a.id}`)}
+          rows={retornosFiltrados}
+          rowKey={(r) => r.id}
+          onRowClick={(r) => router.push(`/cobrancas/${r.boletoId}`)}
           empty={
             <EmptyState
-              title="Nenhum abono aqui"
-              description="Os abonos concedidos nos títulos e nos contatos aparecem nesta trilha."
+              title="Nenhuma negociação registrada"
+              description="Os retornos manuais à régua aparecem aqui — use o botão no card do Kanban."
             />
           }
         />

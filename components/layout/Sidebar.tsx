@@ -26,7 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/cobrancas', label: 'Cobranças', Icon: IconCreditCard, recurso: 'cobrancas' },
   { href: '/clientes', label: 'Clientes', Icon: IconUsers2, recurso: 'clientes' },
   { href: '/notificacoes', label: 'Réguas e Notificações', Icon: IconMessageSquare, recurso: 'reguas' },
-  { href: '/abonos', label: 'Abonos', Icon: IconPercent, recurso: 'abonosSupervisao' },
+  { href: '/abonos', label: 'Negociações', Icon: IconPercent, recurso: 'abonosSupervisao' },
   { href: '/configuracoes', label: 'Configurações', Icon: IconSettings, recurso: 'configuracoes' },
   { href: '/usuarios', label: 'Usuários', Icon: IconUserCog, recurso: 'usuarios' },
 ]

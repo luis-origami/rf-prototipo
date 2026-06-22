@@ -10,6 +10,7 @@ import {
   resolverNegociacao,
   type ColunaKanban,
 } from '../../../../lib/kanban'
+import type { RetornoManualNegociacao } from '../../../../lib/negociacoes'
 import { IconChevronLeft, IconChevronRight, IconClock, IconX } from '../../../../components/icons'
 import { KanbanCard } from './KanbanCard'
 
@@ -31,8 +32,12 @@ interface KanbanBoardProps {
   comunicacoesDoBoleto: (boleto: Boleto) => number
   /** todas as comunicações (seed + sessão) usadas para resolver negociações */
   todasComunicacoes: Comunicacao[]
+  /** retornos manuais registrados — usados para encerrar negociações antecipadas */
+  retornosManual: RetornoManualNegociacao[]
   onAbrir: (boleto: Boleto) => void
   onRegistrarComunicacao?: (boleto: Boleto) => void
+  /** retorno manual à régua — abre modal de confirmação na página pai */
+  onRetornarRegua?: (boleto: Boleto, promessaData: string) => void
   /** remoção de etapas — ausente sem permissão (gestão vive no editor dedicado) */
   onRemoverColuna?: (id: string) => void
 }
@@ -42,8 +47,10 @@ export function KanbanBoard({
   colunas,
   comunicacoesDoBoleto,
   todasComunicacoes,
+  retornosManual,
   onAbrir,
   onRegistrarComunicacao,
+  onRetornarRegua,
   onRemoverColuna,
 }: KanbanBoardProps) {
   // affordance de overflow: fade nas bordas + setas quando há etapas fora da
@@ -86,13 +93,13 @@ export function KanbanBoard({
 
   const { porColuna, emNegociacao } = useMemo(() => {
     const grupos = new Map<string, ItemColuna[]>(colunas.map((c) => [c.id, []]))
-    const negociando: Array<{ boleto: Boleto; promessaData: string }> = []
+    const negociando: Array<{ boleto: Boleto; promessaData: string; periodoGraca: boolean }> = []
 
     for (const b of boletos) {
-      const neg = resolverNegociacao(b.id, todasComunicacoes)
+      const neg = resolverNegociacao(b.id, todasComunicacoes, retornosManual)
 
       if (neg.emNegociacao) {
-        negociando.push({ boleto: b, promessaData: neg.promessaData! })
+        negociando.push({ boleto: b, promessaData: neg.promessaData!, periodoGraca: neg.periodoGraca })
         continue
       }
 
@@ -111,7 +118,7 @@ export function KanbanBoard({
     negociando.sort((a, b) => a.promessaData.localeCompare(b.promessaData))
 
     return { porColuna: grupos, emNegociacao: negociando }
-  }, [boletos, colunas, todasComunicacoes])
+  }, [boletos, colunas, todasComunicacoes, retornosManual])
 
   return (
     <div className="relative">
@@ -250,15 +257,17 @@ export function KanbanBoard({
                 Nenhum título aguardando promessa.
               </p>
             ) : (
-              emNegociacao.map(({ boleto: b, promessaData }) => (
+              emNegociacao.map(({ boleto: b, promessaData, periodoGraca }) => (
                 <KanbanCard
                   key={b.id}
                   boleto={b}
                   marco={marcoDoBoleto(b, colunas)}
                   comunicacoes={comunicacoesDoBoleto(b)}
                   promessaData={promessaData}
+                  periodoGraca={periodoGraca}
                   onAbrir={onAbrir}
                   onRegistrarComunicacao={onRegistrarComunicacao}
+                  onRetornarRegua={onRetornarRegua ? () => onRetornarRegua(b, promessaData) : undefined}
                 />
               ))
             )}

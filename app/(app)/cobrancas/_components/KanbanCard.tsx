@@ -11,7 +11,7 @@ import {
   statusEfetivo,
   type Boleto,
 } from '../../../../mocks'
-import { IconAlertTriangle, IconClock } from '../../../../components/icons'
+import { IconAlertTriangle, IconClock, IconRefreshCw } from '../../../../components/icons'
 import { abonoAtivoDoBoleto, valorFinalDoBoleto } from '../../../../lib/abonos'
 import { useAbonos } from '../../../../hooks/useAbonos'
 import { StatusBadge } from '../../../../components/ui/StatusBadge'
@@ -50,9 +50,13 @@ interface KanbanCardProps {
   promessaData?: string | null
   /** promessa de pagamento não cumprida — badge de alerta */
   promessaQuebrada?: boolean
+  /** promessa expirou mas está dentro dos 2 d.u. de carência */
+  periodoGraca?: boolean
+  /** retornar cobrança à régua antes da carência esgotar */
+  onRetornarRegua?: () => void
 }
 
-export function KanbanCard({ boleto, marco, comunicacoes, onAbrir, onRegistrarComunicacao, promessaData, promessaQuebrada }: KanbanCardProps) {
+export function KanbanCard({ boleto, marco, comunicacoes, onAbrir, onRegistrarComunicacao, promessaData, promessaQuebrada, periodoGraca, onRetornarRegua }: KanbanCardProps) {
   const abonos = useAbonos()
   const cliente = getClienteById(boleto.clienteId)
   const empresa = getEmpresa(getEmpresaDoBoleto(boleto))
@@ -149,13 +153,41 @@ export function KanbanCard({ boleto, marco, comunicacoes, onAbrir, onRegistrarCo
       )}
 
       {/* promessa de pagamento ativa — data esperada pelo cliente */}
-      {promessaData && !promessaQuebrada && (
+      {promessaData && !promessaQuebrada && !periodoGraca && (
         <div className="mt-2 flex items-center gap-1.5 rounded-sm border border-avencer-border bg-avencer-bg px-2 py-1">
           <IconClock size={11} className="shrink-0 text-avencer-fg" />
           <span className="label-mono text-avencer-fg">
             Pagamento prometido: {formatarData(promessaData)}
           </span>
         </div>
+      )}
+
+      {/* carência — promessa expirou, aguardando 2 d.u. antes de sair da negociação */}
+      {promessaData && periodoGraca && (
+        <div className="mt-2 flex items-center gap-1.5 rounded-sm border border-hoje-border bg-hoje-bg px-2 py-1">
+          <IconClock size={11} className="shrink-0 text-hoje-fg" />
+          <span className="label-mono text-hoje-fg">
+            Promessa vencida em {formatarData(promessaData)} — carência 2 d.u.
+          </span>
+        </div>
+      )}
+
+      {/* botão de retorno manual — só exibido quando o card está em negociação */}
+      {promessaData && !promessaQuebrada && onRetornarRegua && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onRetornarRegua()
+          }}
+          className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-sm border
+            border-line-strong px-2 py-1 text-xs font-medium text-ink-muted
+            transition-colors duration-100 hover:border-line hover:bg-neutral-100
+            hover:text-ink focus-ring"
+        >
+          <IconRefreshCw size={11} />
+          Retornar à régua
+        </button>
       )}
 
       {/* promessa não cumprida — negociação mal sucedida */}
