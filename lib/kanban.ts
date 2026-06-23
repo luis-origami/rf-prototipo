@@ -35,9 +35,15 @@ export const COLUNAS_PADRAO: ColunaKanban[] = [
     universo vinculável às etapas; lido a cada chamada para refletir marcos
     recém-cadastrados na tela de réguas */
 export function marcosDasReguas(): string[] {
-  return [...new Set(lerReguas().flatMap((r) => r.etapas.map((e) => e.ancora)))].sort(
-    (a, b) => ancoraParaDias(a) - ancoraParaDias(b),
-  )
+  // só réguas globais alimentam o pool de marcos do Kanban — réguas específicas
+  // de cliente não poluem a configuração das etapas do board
+  return [
+    ...new Set(
+      lerReguas()
+        .filter((r) => !r.clienteId)
+        .flatMap((r) => r.etapas.map((e) => e.ancora)),
+    ),
+  ].sort((a, b) => ancoraParaDias(a) - ancoraParaDias(b))
 }
 
 /** marcos ainda não usados por nenhuma coluna — opções para nova etapa */

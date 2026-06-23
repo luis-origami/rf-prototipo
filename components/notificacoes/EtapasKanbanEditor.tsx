@@ -23,10 +23,11 @@ import { MultiSelectDropdown, type DropdownOption } from '../ui/MultiSelectDropd
 import { IconEdit, IconRefreshCw, IconTrash2 } from '../icons'
 
 /* Etapas do Kanban de cobranças — aba de Réguas e Notificações. Todas as
-   etapas são manipuláveis (criar, editar e remover, inclusive as padrão);
-   o seed padrão pode ser restaurado a qualquer momento. Limite de 7; um
-   marco pertence a uma única etapa. A posição dos títulos é derivada do
-   vencimento — nada se move manualmente e nada grava no Certtus. */
+   etapas do Kanban são manipuláveis (criar, editar e remover, inclusive as
+   padrão); o seed padrão pode ser restaurado a qualquer momento. Limite de 7;
+   um marco da régua pertence a uma única etapa do Kanban. A posição dos
+   títulos é derivada do vencimento — nada se move manualmente, nada grava no
+   Certtus. */
 
 interface EtapasKanbanEditorProps {
   podeEditar: boolean
@@ -67,7 +68,7 @@ export function EtapasKanbanEditor({ podeEditar, toast }: EtapasKanbanEditorProp
 
   function adicionar() {
     if (!titulo.trim()) {
-      setErro('Informe o nome da etapa.')
+      setErro('Informe o nome da etapa do Kanban.')
       return
     }
     if (marcos.size === 0) {
@@ -75,7 +76,7 @@ export function EtapasKanbanEditor({ podeEditar, toast }: EtapasKanbanEditorProp
       return
     }
     if (!adicionarColuna(titulo, [...marcos])) {
-      setErro('Não foi possível adicionar — verifique o limite de etapas e os marcos livres.')
+      setErro('Não foi possível adicionar — verifique o limite de etapas do Kanban e os marcos livres.')
       return
     }
     setTitulo('')
@@ -94,7 +95,7 @@ export function EtapasKanbanEditor({ podeEditar, toast }: EtapasKanbanEditorProp
   function salvarEdicao() {
     if (!editandoId) return
     if (!editTitulo.trim()) {
-      setEditErro('Informe o nome da etapa.')
+      setEditErro('Informe o nome da etapa do Kanban.')
       return
     }
     if (editMarcos.size === 0) {
@@ -106,19 +107,19 @@ export function EtapasKanbanEditor({ podeEditar, toast }: EtapasKanbanEditorProp
       return
     }
     setEditandoId(null)
-    toast('Etapa atualizada.')
+    toast('Etapa do Kanban atualizada.')
   }
 
   function remover(id: string) {
     if (editandoId === id) setEditandoId(null)
     removerColuna(id)
-    toast('Etapa removida — os marcos voltaram a ficar disponíveis.')
+    toast('Etapa do Kanban removida — os marcos voltaram a ficar disponíveis.')
   }
 
   function restaurar() {
     setEditandoId(null)
     restaurarPadrao()
-    toast('Etapas padrão restauradas.')
+    toast('Etapas padrão do Kanban restauradas.')
   }
 
   return (
@@ -126,7 +127,7 @@ export function EtapasKanbanEditor({ podeEditar, toast }: EtapasKanbanEditorProp
       {/* etapas vigentes — na ordem da régua (menor marco primeiro) */}
       <div className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
-          <span className="label-mono text-ink-muted">Etapas vigentes</span>
+          <span className="label-mono text-ink-muted">Etapas do Kanban</span>
           <span className="num font-mono text-xs text-ink-muted">
             {colunas.length}/{MAX_COLUNAS_KANBAN}
           </span>
@@ -152,7 +153,7 @@ export function EtapasKanbanEditor({ podeEditar, toast }: EtapasKanbanEditorProp
               {emEdicao ? (
                 <div className="flex flex-col gap-3">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Field label="Nome da etapa" error={editErro || undefined}>
+                    <Field label="Nome da etapa do Kanban" error={editErro || undefined}>
                       <Input
                         value={editTitulo}
                         invalid={!!editErro}
@@ -227,8 +228,8 @@ export function EtapasKanbanEditor({ podeEditar, toast }: EtapasKanbanEditorProp
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs leading-relaxed text-ink-muted">
-            Ao remover ou editar uma etapa, os marcos liberados ficam disponíveis para as demais.
-            A posição dos títulos no board é derivada do vencimento — nada grava no Certtus.
+            Ao remover ou editar uma etapa do Kanban, os marcos liberados ficam disponíveis para as
+            demais. A posição dos títulos no board é derivada do vencimento — nada grava no Certtus.
           </p>
           {podeEditar && (
             <Button variant="ghost" size="sm" onClick={restaurar}>
@@ -243,21 +244,21 @@ export function EtapasKanbanEditor({ podeEditar, toast }: EtapasKanbanEditorProp
           dropdown de marcos não ser cortado pelo card */}
       <Card overflowVisible>
         <Card.Header>
-          <Card.Title>Nova etapa</Card.Title>
+          <Card.Title>Nova etapa do Kanban</Card.Title>
           <span className="label-mono text-ink-muted">Limite de {MAX_COLUNAS_KANBAN}</span>
         </Card.Header>
         <Card.Body className="flex flex-col gap-4">
           {!podeEditar ? (
             <Alert kind="info" title="Somente leitura.">
-              O perfil comercial consulta as etapas, mas não as altera.
+              O perfil comercial consulta as etapas do Kanban, mas não as altera.
             </Alert>
           ) : noLimite ? (
-            <Alert kind="info" title={`Limite de ${MAX_COLUNAS_KANBAN} etapas atingido.`}>
+            <Alert kind="info" title={`Limite de ${MAX_COLUNAS_KANBAN} etapas do Kanban atingido.`}>
               Remova uma etapa para criar outra.
             </Alert>
           ) : (
             <>
-              <Field label="Nome da etapa" error={erro || undefined}>
+              <Field label="Nome da etapa do Kanban" error={erro || undefined}>
                 <Input
                   value={titulo}
                   invalid={!!erro}
@@ -271,7 +272,7 @@ export function EtapasKanbanEditor({ podeEditar, toast }: EtapasKanbanEditorProp
               </Field>
               <Field
                 label="Marcos da régua"
-                helper="Um marco pertence a uma única etapa — só os livres aparecem aqui."
+                helper="Um marco pertence a uma única etapa do Kanban — só os livres aparecem aqui."
               >
                 {marcosLivres.length === 0 ? (
                   <p className="text-sm text-ink-muted">

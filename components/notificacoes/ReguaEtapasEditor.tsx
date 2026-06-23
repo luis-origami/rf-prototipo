@@ -9,23 +9,25 @@ import { Switch } from '../ui/Switch'
 import { IconEdit, IconPlus, IconTrash2 } from '../icons'
 import { NovaEtapaModal, type EtapaFormValues } from './NovaEtapaModal'
 
-/* Editor de etapas de uma régua — usado na configuração global (réguas padrão)
-   e no detalhe do cliente (régua específica). Cada etapa envia um único
-   template (o mesmo template pode servir a várias etapas). Etapas podem ser
-   ativadas/desativadas, editadas (marco, nome, tipo, template) e excluídas. */
+/* Editor de marcos de uma régua — usado na configuração global (réguas padrão)
+   e no detalhe do cliente (régua específica). Cada marco envia um único
+   template (o mesmo template pode servir a vários marcos). Marcos podem ser
+   ativados/desativados, editados (disparo, nome, tipo, template) e excluídos. */
 
 interface ReguaEtapasEditorProps {
   etapas: EtapaRegua[]
   templates: Template[]
   /** false = somente leitura (perfil sem permissão de régua) */
   editable: boolean
-  /** nome exibido no modal de nova etapa */
+  /** nome exibido no modal de novo marco */
   reguaNome: string
   onToggle: (etapaId: string, ativo: boolean) => void
   onChangeTemplate: (etapaId: string, templateId: string) => void
   onAddEtapa: (values: EtapaFormValues) => void
   onEditEtapa: (etapaId: string, values: EtapaFormValues) => void
   onRemoveEtapa: (etapaId: string) => void
+  /** cria um template novo direto do modal de marco */
+  onCreateTemplate?: (values: { nome: string; corpo: string }) => Template
 }
 
 export function ReguaEtapasEditor({
@@ -38,6 +40,7 @@ export function ReguaEtapasEditor({
   onAddEtapa,
   onEditEtapa,
   onRemoveEtapa,
+  onCreateTemplate,
 }: ReguaEtapasEditorProps) {
   const [modalAberto, setModalAberto] = useState(false)
   const [editando, setEditando] = useState<EtapaRegua | null>(null)
@@ -64,7 +67,7 @@ export function ReguaEtapasEditor({
                 value={e.templateId}
                 onChange={(ev) => onChangeTemplate(e.id, ev.target.value)}
                 className="w-60"
-                aria-label={`Template da etapa ${e.ancora}`}
+                aria-label={`Template do marco ${e.ancora}`}
               >
                 {templates.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -82,7 +85,7 @@ export function ReguaEtapasEditor({
                 <Button
                   variant="ghost"
                   size="sm"
-                  aria-label={`Editar etapa ${e.ancora}`}
+                  aria-label={`Editar marco ${e.ancora}`}
                   onClick={() => {
                     setEditando(e)
                     setModalAberto(true)
@@ -93,7 +96,7 @@ export function ReguaEtapasEditor({
                 <Button
                   variant="ghost"
                   size="sm"
-                  aria-label={`Excluir etapa ${e.ancora}`}
+                  aria-label={`Excluir marco ${e.ancora}`}
                   onClick={() => onRemoveEtapa(e.id)}
                 >
                   <IconTrash2 size={13} />
@@ -104,7 +107,7 @@ export function ReguaEtapasEditor({
               checked={e.ativo}
               disabled={!editable}
               onChange={(v) => onToggle(e.id, v)}
-              aria-label={`${e.ativo ? 'Desativar' : 'Ativar'} etapa ${e.ancora}`}
+              aria-label={`${e.ativo ? 'Desativar' : 'Ativar'} marco ${e.ancora}`}
             />
           </li>
         ))}
@@ -120,7 +123,7 @@ export function ReguaEtapasEditor({
             }}
           >
             <IconPlus size={14} />
-            Adicionar etapa
+            Adicionar marco
           </Button>
         </div>
       )}
@@ -141,6 +144,7 @@ export function ReguaEtapasEditor({
         templates={templates}
         reguaNome={reguaNome}
         inicial={editando ?? undefined}
+        onCreateTemplate={onCreateTemplate}
       />
     </>
   )

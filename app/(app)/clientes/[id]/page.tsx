@@ -19,8 +19,10 @@ import {
   type Comunicacao,
   type EstadoProcesso,
   type ReguaCobranca,
+  type Template,
 } from '../../../../mocks'
 import { useReguas } from '../../../../hooks/useReguas'
+import { lerReguas, salvarReguas } from '../../../../lib/reguasStore'
 import { useNegativacoes } from '../../../../hooks/useNegativacoes'
 import { getSession, podeAcessar } from '../../../../lib/auth'
 import { processarAbonoDaComunicacao } from '../../../../lib/abonos'
@@ -44,7 +46,6 @@ import { Money } from '../../../../components/ui/Money'
 import { Tag } from '../../../../components/ui/Tag'
 import { Select } from '../../../../components/ui/Select'
 import { Field } from '../../../../components/ui/Field'
-import { ReguaFormModal, type ReguaFormValues } from '../../../../components/notificacoes/ReguaFormModal'
 import { ReguaEtapasEditor } from '../../../../components/notificacoes/ReguaEtapasEditor'
 import { type EtapaFormValues } from '../../../../components/notificacoes/NovaEtapaModal'
 import { DataTable, type Column } from '../../../../components/ui/DataTable'
@@ -80,19 +81,26 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
   const [modalNegativar, setModalNegativar] = useState(false)
   const [motivoNeg, setMotivoNeg] = useState('')
   const [modalRegua, setModalRegua] = useState(false)
-  const [modalReguaEspecifica, setModalReguaEspecifica] = useState(false)
-  // réguas em estado local: permite criar régua específica deste cliente (protótipo)
-  // réguas vigentes do store (inclui etapas/réguas criadas em Réguas e
-  // Notificações) + réguas específicas deste cliente, locais ao protótipo.
-  // Só as específicas ('rc-') são editáveis aqui — as padrão, na config global.
+  // réguas vigentes do store: config global + específicas de cliente (que
+  // persistem com clienteId). As específicas deste cliente são editáveis aqui;
+  // as globais, na configuração de Réguas e Notificações.
   const reguasVigentes = useReguas()
-  const [reguasCliente, setReguasCliente] = useState<ReguaCobranca[]>([])
-  const listaReguas = useMemo(
-    () => [...reguasVigentes, ...reguasCliente],
-    [reguasVigentes, reguasCliente],
+  const reguasDoCliente = useMemo(
+    () => reguasVigentes.filter((r) => r.clienteId === id),
+    [reguasVigentes, id],
   )
-  const [reguaId, setReguaId] = useState(reguas[0].id)
-  const [reguaPendente, setReguaPendente] = useState(reguas[0].id)
+  const listaReguas = useMemo(
+    () => [...reguasVigentes.filter((r) => !r.clienteId), ...reguasDoCliente],
+    [reguasVigentes, reguasDoCliente],
+  )
+  // ao abrir, prioriza a régua específica mais recente do cliente, se houver
+  const [reguaId, setReguaId] = useState(
+    () => reguasDoCliente[reguasDoCliente.length - 1]?.id ?? reguas[0].id,
+  )
+  const [reguaPendente, setReguaPendente] = useState(reguaId)
+
+  // templates locais — permitem criar template direto do modal de marco
+  const [listaTemplates, setListaTemplates] = useState<Template[]>(templates)
 
   const [comunicacoes, setComunicacoes] = useState<Comunicacao[]>(() => getComunicacoesDoCliente(id))
   const [formAberto, setFormAberto] = useState(false)
@@ -124,7 +132,7 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
   }
 
   const regua = listaReguas.find((r) => r.id === reguaId) ?? listaReguas[0]
-  const reguaEspecifica = regua.id.startsWith('rc-')
+  const reguaEspecifica = !!regua.clienteId
   const piorAtraso = boletosCliente
     .filter((b) => b.status === 'atrasado' || b.status === 'inadimplente')
     .reduce<number | null>((max, b) => Math.max(max ?? 0, b.diasAtraso ?? 0), null)
@@ -177,10 +185,10 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
     toast('Régua do cliente atualizada.')
   }
 
-  // edição da régua específica — altera apenas a régua deste cliente
-  // (o editor só aparece para réguas 'rc-', que vivem em reguasCliente)
+  // edição da régua específica — altera apenas a régua deste cliente, agora
+  // persistida no store (sobrevive à navegação e ao reload)
   function atualizarReguaCliente(transform: (r: ReguaCobranca) => ReguaCobranca) {
-    setReguasCliente((prev) => prev.map((r) => (r.id === reguaId ? transform(r) : r)))
+    salvarReguas(lerReguas().map((r) => (r.id === reguaId ? transform(r) : r)))
   }
 
   function alternarEtapaCliente(etapaId: string, ativo: boolean) {
@@ -188,7 +196,7 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
       ...r,
       etapas: r.etapas.map((e) => (e.id === etapaId ? { ...e, ativo } : e)),
     }))
-    toast(ativo ? 'Etapa ativada.' : 'Etapa desativada.')
+    toast(ativo ? 'Marco ativado.' : 'Marco desativado.')
   }
 
   function trocarTemplateEtapaCliente(etapaId: string, templateId: string) {
@@ -196,7 +204,7 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
       ...r,
       etapas: r.etapas.map((e) => (e.id === etapaId ? { ...e, templateId } : e)),
     }))
-    toast('Template da etapa atualizado.')
+    toast('Template do marco atualizado.')
   }
 
   function adicionarEtapaCliente({ ancora, label, templateId, tipo }: EtapaFormValues) {
@@ -208,13 +216,13 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
       tipo,
       ativo: true,
       descricao:
-        tipo === 'handoff' ? 'Aviso ao financeiro: tratamento manual da etapa.' : 'Etapa adicionada manualmente.',
+        tipo === 'handoff' ? 'Aviso ao financeiro: tratamento manual do marco.' : 'Marco adicionado manualmente.',
     }
     atualizarReguaCliente((r) => ({
       ...r,
       etapas: [...r.etapas, nova].sort((a, b) => ancoraParaDias(a.ancora) - ancoraParaDias(b.ancora)),
     }))
-    toast(`Etapa ${ancora} adicionada à régua do cliente.`)
+    toast(`Marco ${ancora} adicionado à régua do cliente.`)
   }
 
   function editarEtapaCliente(etapaId: string, { ancora, label, templateId, tipo }: EtapaFormValues) {
@@ -224,7 +232,7 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
         .map((e) => (e.id === etapaId ? { ...e, ancora, label, templateId, tipo } : e))
         .sort((a, b) => ancoraParaDias(a.ancora) - ancoraParaDias(b.ancora)),
     }))
-    toast('Etapa atualizada.')
+    toast('Marco atualizado.')
   }
 
   function removerEtapaCliente(etapaId: string) {
@@ -232,23 +240,16 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
       ...r,
       etapas: r.etapas.filter((e) => e.id !== etapaId),
     }))
-    toast('Etapa excluída da régua do cliente.')
+    toast('Marco excluído da régua do cliente.')
   }
 
-  function criarReguaEspecifica({ nome, descricao, baseId }: ReguaFormValues) {
-    const base = listaReguas.find((r) => r.id === baseId)
-    const nova: ReguaCobranca = {
-      id: 'rc-' + Date.now().toString(36),
-      nome,
-      descricao: descricao || `Régua específica de ${cliente?.nome ?? 'cliente'}.`,
-      perfil: 'padrao',
-      ativa: true,
-      etapas: (base?.etapas ?? []).map((e) => ({ ...e, id: `${e.id}-c` })),
-    }
-    setReguasCliente((prev) => [...prev, nova])
-    setReguaId(nova.id)
-    setModalReguaEspecifica(false)
-    toast('Régua específica criada e aplicada ao cliente.')
+  // cria um template e o devolve já com id — usado pelo atalho dentro do modal
+  // de marco (templates do detalhe são locais ao protótipo)
+  function criarTemplateInlineCliente(values: { nome: string; corpo: string }): Template {
+    const novo: Template = { id: 't-' + Date.now().toString(36), ...values }
+    setListaTemplates((prev) => [...prev, novo])
+    toast('Template criado. Aguarda aprovação do canal.')
+    return novo
   }
 
   function salvarComunicacao(values: ComunicacaoFormValues) {
@@ -456,11 +457,11 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
           {!reguaEspecifica && podeOperarRegua && (
             <div className="border-t border-line bg-neutral-50 px-5 py-3">
               <span className="text-xs text-ink-muted">
-                Régua padrão — para ajustar etapas só deste cliente,{' '}
+                Régua padrão — para ajustar marcos só deste cliente,{' '}
                 <button
                   type="button"
                   className="font-medium text-link hover:underline focus-ring rounded-sm"
-                  onClick={() => setModalReguaEspecifica(true)}
+                  onClick={() => router.push(`/clientes/${id}/regua/nova`)}
                 >
                   crie uma régua específica
                 </button>
@@ -475,12 +476,12 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
       {tab === 'regua' && reguaEspecifica && (
         <Card className="mt-5">
           <Card.Header>
-            <Card.Title>Etapas da régua</Card.Title>
+            <Card.Title>Marcos da régua</Card.Title>
             <span className="label-mono text-ink-muted">Só este cliente</span>
           </Card.Header>
           <ReguaEtapasEditor
             etapas={regua.etapas}
-            templates={templates}
+            templates={listaTemplates}
             editable={podeOperarRegua}
             reguaNome={regua.nome}
             onToggle={alternarEtapaCliente}
@@ -488,6 +489,7 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
             onAddEtapa={adicionarEtapaCliente}
             onEditEtapa={editarEtapaCliente}
             onRemoveEtapa={removerEtapaCliente}
+            onCreateTemplate={podeOperarRegua ? criarTemplateInlineCliente : undefined}
           />
         </Card>
       )}
@@ -595,7 +597,7 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
               size="sm"
               onClick={() => {
                 setModalRegua(false)
-                setModalReguaEspecifica(true)
+                router.push(`/clientes/${id}/regua/nova`)
               }}
             >
               <IconPlus size={14} />
@@ -610,16 +612,6 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
           <Button onClick={confirmarTrocaRegua}>Aplicar régua</Button>
         </Modal.Footer>
       </Modal>
-
-      {/* criação de régua específica do cliente */}
-      <ReguaFormModal
-        open={modalReguaEspecifica}
-        onClose={() => setModalReguaEspecifica(false)}
-        onSubmit={criarReguaEspecifica}
-        bases={listaReguas}
-        titulo="Régua específica do cliente"
-        nomeInicial={`Régua · ${cliente.nome}`}
-      />
 
       {toastHost}
     </>

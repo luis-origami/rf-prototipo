@@ -23,11 +23,13 @@ interface ReguaFormModalProps {
   open: boolean
   onClose: () => void
   onSubmit: (values: ReguaFormValues) => void
-  /** réguas que podem servir de base (etapas copiadas) */
+  /** réguas que podem servir de base (etapas copiadas) — só no modo 'criar' */
   bases: ReguaCobranca[]
   titulo: string
   nomeInicial?: string
   descricaoInicial?: string
+  /** 'editar' esconde o "Basear em" e só altera nome/descrição */
+  modo?: 'criar' | 'editar'
 }
 
 export function ReguaFormModal({ open, onClose, ...form }: ReguaFormModalProps) {
@@ -49,11 +51,14 @@ function ReguaForm({
   titulo,
   nomeInicial = '',
   descricaoInicial = '',
+  modo = 'criar',
 }: ReguaFormProps) {
   const [nome, setNome] = useState(nomeInicial)
   const [descricao, setDescricao] = useState(descricaoInicial)
   const [baseId, setBaseId] = useState(bases[0]?.id ?? '')
   const [erro, setErro] = useState('')
+
+  const editando = modo === 'editar'
 
   function salvar() {
     if (!nome.trim()) {
@@ -82,22 +87,24 @@ function ReguaForm({
               className="w-full"
             />
           </Field>
-          <Field
-            label="Basear em"
-            helper={
-              base
-                ? `${base.etapas.length} etapas copiadas — ajuste depois de criar.`
-                : 'As etapas da régua base são copiadas.'
-            }
-          >
-            <Select value={baseId} onChange={(e) => setBaseId(e.target.value)} className="w-full">
-              {bases.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.nome}
-                </option>
-              ))}
-            </Select>
-          </Field>
+          {!editando && (
+            <Field
+              label="Basear em"
+              helper={
+                base
+                  ? `${base.etapas.length} marcos copiados — ajuste depois de criar.`
+                  : 'Os marcos da régua base são copiados.'
+              }
+            >
+              <Select value={baseId} onChange={(e) => setBaseId(e.target.value)} className="w-full">
+                {bases.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.nome}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
           <Field label="Descrição" helper="Opcional — quando esta régua deve ser aplicada.">
             <Textarea
               value={descricao}
@@ -112,7 +119,7 @@ function ReguaForm({
         <Button variant="secondary" onClick={onClose}>
           Cancelar
         </Button>
-        <Button onClick={salvar}>Criar régua</Button>
+        <Button onClick={salvar}>{editando ? 'Salvar alterações' : 'Criar régua'}</Button>
       </Modal.Footer>
     </>
   )

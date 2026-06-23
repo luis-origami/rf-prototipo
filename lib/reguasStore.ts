@@ -46,6 +46,16 @@ export function salvarReguas(reguas: ReguaCobranca[]): void {
   window.dispatchEvent(new Event('reguas-changed'))
 }
 
+/** acrescenta uma régua ao store (global ou específica de cliente) */
+export function adicionarRegua(regua: ReguaCobranca): void {
+  salvarReguas([...lerReguas(), regua])
+}
+
+/** edita nome e descrição de uma régua já existente */
+export function atualizarReguaInfo(id: string, nome: string, descricao: string): void {
+  salvarReguas(lerReguas().map((r) => (r.id === id ? { ...r, nome, descricao } : r)))
+}
+
 // snapshot cacheado pela string crua — referência estável entre renders
 let _snapshotRaw: string | null = null
 let _snapshotVal: ReguaCobranca[] = REGUAS_SEED

@@ -174,6 +174,9 @@ export interface ReguaCobranca {
   perfil: 'padrao' | 'reincidente'
   ativa: boolean
   etapas: EtapaRegua[]
+  /** quando presente, é uma régua específica deste cliente — não aparece na
+      configuração global de réguas, só no detalhe do cliente vinculado */
+  clienteId?: string
 }
 
 // ── Clientes ─────────────────────────────────────────────────────────────

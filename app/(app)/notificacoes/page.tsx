@@ -13,7 +13,7 @@ import {
   type StatusNotificacao,
   type Template,
 } from '../../../mocks'
-import { lerReguas, salvarReguas } from '../../../lib/reguasStore'
+import { lerReguas, salvarReguas, atualizarReguaInfo } from '../../../lib/reguasStore'
 import { useReguas } from '../../../hooks/useReguas'
 import { getSession, podeAcessar } from '../../../lib/auth'
 import { PageHeader } from '../../../components/ui/PageHeader'
@@ -28,7 +28,7 @@ import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { Modal } from '../../../components/ui/Modal'
 import { useToast } from '../../../hooks/useToast'
-import { IconPlus, IconTrash2 } from '../../../components/icons'
+import { IconPlus, IconTrash2, IconEdit } from '../../../components/icons'
 import { WaPreview } from '../../../components/notificacoes/WaPreview'
 import { ReguaFormModal, type ReguaFormValues } from '../../../components/notificacoes/ReguaFormModal'
 import { ReguaEtapasEditor } from '../../../components/notificacoes/ReguaEtapasEditor'
@@ -80,9 +80,11 @@ function ReguasENotificacoesContent() {
 
   // réguas no store compartilhado — o Kanban deriva seus marcos daqui e
   // alterações persistem entre telas e reloads (templates seguem locais)
-  const listaReguas = useReguas()
+  // só réguas globais nesta tela — as específicas de cliente vivem no detalhe
+  const listaReguas = useReguas().filter((r) => !r.clienteId)
   const [reguaSelId, setReguaSelId] = useState(reguas[0].id)
   const [modalNovaRegua, setModalNovaRegua] = useState(false)
+  const [modalEditarRegua, setModalEditarRegua] = useState(false)
 
   function atualizarReguas(transform: (rs: ReguaCobranca[]) => ReguaCobranca[]) {
     salvarReguas(transform(lerReguas()))
@@ -109,7 +111,7 @@ function ReguasENotificacoesContent() {
           : r,
       ),
     )
-    toast(ativo ? 'Etapa ativada.' : 'Etapa desativada.')
+    toast(ativo ? 'Marco ativado.' : 'Marco desativado.')
   }
 
   function atualizarTemplateEtapa(etapaId: string, templateId: string) {
@@ -120,7 +122,7 @@ function ReguasENotificacoesContent() {
           : r,
       ),
     )
-    toast('Template da etapa atualizado.')
+    toast('Template do marco atualizado.')
   }
 
   function adicionarEtapa({ ancora, label, templateId, tipo }: EtapaFormValues) {
@@ -132,7 +134,7 @@ function ReguasENotificacoesContent() {
       tipo,
       ativo: true,
       descricao:
-        tipo === 'handoff' ? 'Aviso ao financeiro: tratamento manual da etapa.' : 'Etapa adicionada manualmente.',
+        tipo === 'handoff' ? 'Aviso ao financeiro: tratamento manual do marco.' : 'Marco adicionado manualmente.',
     }
     atualizarReguas((prev) =>
       prev.map((r) =>
@@ -146,7 +148,7 @@ function ReguasENotificacoesContent() {
           : r,
       ),
     )
-    toast(`Etapa ${ancora} adicionada à régua.`)
+    toast(`Marco ${ancora} adicionado à régua.`)
   }
 
   function editarEtapa(etapaId: string, { ancora, label, templateId, tipo }: EtapaFormValues) {
@@ -162,7 +164,7 @@ function ReguasENotificacoesContent() {
           : r,
       ),
     )
-    toast('Etapa atualizada.')
+    toast('Marco atualizado.')
   }
 
   function removerEtapa(etapaId: string) {
@@ -171,7 +173,7 @@ function ReguasENotificacoesContent() {
         r.id === reguaSelId ? { ...r, etapas: r.etapas.filter((e) => e.id !== etapaId) } : r,
       ),
     )
-    toast('Etapa excluída da régua.')
+    toast('Marco excluído da régua.')
   }
 
   function criarRegua({ nome, descricao, baseId }: ReguaFormValues) {
@@ -188,6 +190,21 @@ function ReguasENotificacoesContent() {
     setReguaSelId(nova.id)
     setModalNovaRegua(false)
     toast('Régua criada.')
+  }
+
+  function editarRegua({ nome, descricao }: ReguaFormValues) {
+    atualizarReguaInfo(reguaSelId, nome, descricao)
+    setModalEditarRegua(false)
+    toast('Régua atualizada.')
+  }
+
+  // cria um template e o devolve já com id — usado pelo atalho dentro do modal
+  // de marco (não troca o template selecionado no editor da aba Templates)
+  function criarTemplateInline(values: TemplateFormValues): Template {
+    const novo: Template = { id: gerarId('t-'), ...values }
+    setListaTemplates((prev) => [...prev, novo])
+    toast('Template criado. Aguarda aprovação do canal.')
+    return novo
   }
 
   function selecionarTemplate(t: Template) {
@@ -307,7 +324,7 @@ function ReguasENotificacoesContent() {
                   <div className="font-display text-base font-semibold text-ink">{r.nome}</div>
                   <p className="mt-1 text-xs leading-snug text-ink-muted">{r.descricao}</p>
                   <div className="num mt-2 font-mono text-xs text-ink-muted">
-                    {r.etapas.filter((e) => e.ativo).length} etapas ativas
+                    {r.etapas.filter((e) => e.ativo).length} marcos ativos
                   </div>
                 </button>
               )
@@ -328,7 +345,15 @@ function ReguasENotificacoesContent() {
           {/* etapas da régua selecionada */}
           <Card>
             <Card.Header>
-              <Card.Title>{reguaSel.nome}</Card.Title>
+              <span className="flex min-w-0 items-center gap-2">
+                <Card.Title>{reguaSel.nome}</Card.Title>
+                {podeEditarRegua && (
+                  <Button variant="ghost" size="sm" onClick={() => setModalEditarRegua(true)}>
+                    <IconEdit size={13} />
+                    Editar régua
+                  </Button>
+                )}
+              </span>
               <span className="label-mono text-ink-muted">D0 = vencimento</span>
             </Card.Header>
             <ReguaEtapasEditor
@@ -341,6 +366,7 @@ function ReguasENotificacoesContent() {
               onAddEtapa={adicionarEtapa}
               onEditEtapa={editarEtapa}
               onRemoveEtapa={removerEtapa}
+              onCreateTemplate={podeEditarTemplate ? criarTemplateInline : undefined}
             />
           </Card>
         </div>
@@ -348,7 +374,7 @@ function ReguasENotificacoesContent() {
 
       {tab === 'templates' && (
         <div className="mt-5 grid grid-cols-1 items-start gap-6 xl:grid-cols-[260px_1fr_360px]">
-          {/* templates — sem vínculo com marco: a etapa da régua é quem
+          {/* templates — sem vínculo com marco: o marco da régua é quem
               escolhe o template, não o contrário */}
           <div className="flex flex-col gap-1.5">
             <div className="label-mono mb-1 text-ink-muted">Templates</div>
@@ -473,6 +499,18 @@ function ReguasENotificacoesContent() {
         titulo="Nova régua de cobrança"
       />
 
+      {/* edição de nome e descrição da régua selecionada */}
+      <ReguaFormModal
+        open={modalEditarRegua}
+        onClose={() => setModalEditarRegua(false)}
+        onSubmit={editarRegua}
+        bases={listaReguas}
+        titulo={`Editar régua · ${reguaSel.nome}`}
+        nomeInicial={reguaSel.nome}
+        descricaoInicial={reguaSel.descricao}
+        modo="editar"
+      />
+
       <NovoTemplateModal
         open={modalNovoTemplate}
         onClose={() => setModalNovoTemplate(false)}
@@ -487,16 +525,16 @@ function ReguasENotificacoesContent() {
             <>
               <b>{templateSel.nome}</b> está em uso por{' '}
               <b>
-                {etapasUsandoTemplate} {etapasUsandoTemplate === 1 ? 'etapa' : 'etapas'}
+                {etapasUsandoTemplate} {etapasUsandoTemplate === 1 ? 'marco' : 'marcos'}
               </b>{' '}
-              de régua. Troque o template dessas etapas antes de excluir — nenhuma notificação
+              de régua. Troque o template desses marcos antes de excluir — nenhuma notificação
               sai sem template aprovado.
             </>
           ) : ultimoTemplate ? (
-            <>É o último template — as etapas da régua precisam de ao menos um para existir.</>
+            <>É o último template — os marcos da régua precisam de ao menos um para existir.</>
           ) : (
             <>
-              <b>{templateSel.nome}</b> será removido da lista. Nenhuma etapa de régua o utiliza,
+              <b>{templateSel.nome}</b> será removido da lista. Nenhum marco de régua o utiliza,
               então nada deixa de ser enviado.
             </>
           )}
