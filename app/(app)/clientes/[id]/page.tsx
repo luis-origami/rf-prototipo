@@ -1,8 +1,8 @@
 'use client'
 
-import { use, useMemo, useState } from 'react'
+import { Suspense, use, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   getClienteById,
   getBoletosDoCliente,
@@ -49,27 +49,40 @@ import { ReguaTimeline } from './_components/ReguaTimeline'
 import { ComunicacaoItem } from '../../../../components/comunicacoes/ComunicacaoItem'
 import { ComunicacaoForm, type ComunicacaoFormValues } from './_components/ComunicacaoForm'
 
-type TabId = 'regua' | 'boletos' | 'comunicacoes'
+type TabId = 'regua' | 'titulos' | 'comunicacoes'
 
 function gerarId() {
   return 'cm' + Date.now().toString(36)
 }
 
-export default function ClienteDetalhe({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+function ClienteDetalheContent({ id }: { id: string }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const cliente = getClienteById(id)
 
   const sessao = getSession()
   const perfil = sessao?.perfil ?? 'comercial'
   const podeOperarRegua = podeAcessar(perfil, 'reguas')
   const podeComunicar = podeAcessar(perfil, 'comunicacaoManual')
+  // comercial vê apenas os dados principais do cliente — sem a aba de régua
+  const podeVerRegua = perfil !== 'comercial'
 
   const { toast, toastHost } = useToast()
   const negativacoes = useNegativacoes()
   const negativado = isNegativado(id, negativacoes)
   const registroNeg = getNegativacao(id, negativacoes)
-  const [tab, setTab] = useState<TabId>('regua')
+  // aba inicial: respeita ?tab= (ex.: vindo de Títulos), senão Régua — ou Títulos
+  // para quem não enxerga a régua (comercial)
+  const tabParam = searchParams.get('tab')
+  const tabInicial: TabId =
+    tabParam === 'titulos'
+      ? 'titulos'
+      : tabParam === 'comunicacoes'
+        ? 'comunicacoes'
+        : podeVerRegua
+          ? 'regua'
+          : 'titulos'
+  const [tab, setTab] = useState<TabId>(tabInicial)
   const [estadoProcesso, setEstadoProcesso] = useState<EstadoProcesso>(cliente?.estadoProcesso ?? 'normal')
   const [modalNegativar, setModalNegativar] = useState(false)
   const [motivoNeg, setMotivoNeg] = useState('')
@@ -268,8 +281,8 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
   ]
 
   const tabs: TabItem<TabId>[] = [
-    { id: 'regua', label: 'Régua de cobrança' },
-    { id: 'boletos', label: 'Boletos', count: boletosCliente.length },
+    ...(podeVerRegua ? [{ id: 'regua' as TabId, label: 'Régua de cobrança' }] : []),
+    { id: 'titulos', label: 'Títulos', count: boletosCliente.length },
     { id: 'comunicacoes', label: 'Contatos', count: comunicacoes.length },
   ]
 
@@ -354,7 +367,7 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
         <Tabs items={tabs} value={tab} onChange={setTab} />
       </div>
 
-      {tab === 'regua' && (
+      {podeVerRegua && tab === 'regua' && (
         <Card className="mt-5">
           <Card.Header>
             <span className="flex flex-wrap items-center gap-2">
@@ -411,14 +424,13 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
         </Card>
       )}
 
-      {tab === 'boletos' && (
+      {tab === 'titulos' && (
         <div className="mt-5">
           <DataTable
             columns={colunasBoletos}
             rows={boletosCliente}
             rowKey={(b) => b.id}
-            onRowClick={(b) => router.push(`/titulos/${b.id}`)}
-            empty={<EmptyState title="Nenhum boleto" description="Este cliente não possui títulos no Certtus." />}
+            empty={<EmptyState title="Nenhum título" description="Este cliente não possui títulos no Certtus." />}
           />
         </div>
       )}
@@ -532,5 +544,15 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
 
       {toastHost}
     </>
+  )
+}
+
+// useSearchParams (?tab=) exige boundary de Suspense no App Router
+export default function ClienteDetalhe({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
+  return (
+    <Suspense fallback={null}>
+      <ClienteDetalheContent id={id} />
+    </Suspense>
   )
 }

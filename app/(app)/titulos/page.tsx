@@ -144,10 +144,13 @@ function CobrancasContent() {
   const colunasKanban = useColunasKanban()
   const { toast, toastHost } = useToast()
   const sessao = getSession()
-  const podeComunicar = podeAcessar(sessao?.perfil ?? 'comercial', 'comunicacaoManual')
+  const perfil = sessao?.perfil ?? 'comercial'
+  const podeComunicar = podeAcessar(perfil, 'comunicacaoManual')
+  // comercial só enxerga o agrupamento por cliente — sem Tabela/Kanban
+  const soAgrupado = perfil === 'comercial'
 
   // alternar a visão preserva todos os filtros — o estado é o mesmo
-  const [visao, setVisao] = useState<Visao>('tabela')
+  const [visao, setVisao] = useState<Visao>(soAgrupado ? 'cliente' : 'tabela')
   const [query, setQuery] = useState('')
   const [statusFiltro, setStatusFiltro] = useState<Set<string>>(new Set())
   const [empresaFiltro, setEmpresaFiltro] = useState<Set<string>>(new Set())
@@ -373,7 +376,7 @@ function CobrancasContent() {
         // nome leva ao detalhe do cliente; stopPropagation evita abrir o título
         return (
           <Link
-            href={`/clientes/${c.id}`}
+            href={`/clientes/${c.id}?tab=titulos`}
             onClick={(e) => e.stopPropagation()}
             className="font-medium text-ink hover:text-link hover:underline focus-ring rounded-sm"
           >
@@ -459,7 +462,7 @@ function CobrancasContent() {
       sortValue: (c) => c.nome,
       render: (c) => (
         <Link
-          href={`/clientes/${c.clienteId}`}
+          href={`/clientes/${c.clienteId}?tab=titulos`}
           onClick={(e) => e.stopPropagation()}
           className="font-medium text-ink hover:text-link hover:underline focus-ring rounded-sm"
         >
@@ -553,33 +556,35 @@ function CobrancasContent() {
                 : `${visiveis.length} boletos · ${formatarMoeda(totalFiltrado)}`}
             </span>
 
-            {/* alternador de visão — troca preserva os filtros ativos */}
-            <div className="flex rounded-md border border-line-strong bg-neutral-100 p-0.5" role="tablist" aria-label="Visão da lista">
-              {(
-                [
-                  { id: 'tabela' as Visao, label: 'Tabela', Icon: IconTable },
-                  { id: 'cliente' as Visao, label: 'Por cliente', Icon: IconUsers2 },
-                  { id: 'kanban' as Visao, label: 'Kanban', Icon: IconKanban },
-                ]
-              ).map(({ id, label, Icon }) => {
-                const ativa = visao === id
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    role="tab"
-                    aria-selected={ativa}
-                    onClick={() => setVisao(id)}
-                    className={`flex items-center gap-1.5 rounded-[5px] px-3 py-1.5 text-xs font-semibold
-                      transition-colors duration-100 focus-ring
-                      ${ativa ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted hover:text-ink'}`}
-                  >
-                    <Icon size={13} />
-                    {label}
-                  </button>
-                )
-              })}
-            </div>
+            {/* alternador de visão — oculto para o comercial (só Por cliente) */}
+            {!soAgrupado && (
+              <div className="flex rounded-md border border-line-strong bg-neutral-100 p-0.5" role="tablist" aria-label="Visão da lista">
+                {(
+                  [
+                    { id: 'tabela' as Visao, label: 'Tabela', Icon: IconTable },
+                    { id: 'cliente' as Visao, label: 'Por cliente', Icon: IconUsers2 },
+                    { id: 'kanban' as Visao, label: 'Kanban', Icon: IconKanban },
+                  ]
+                ).map(({ id, label, Icon }) => {
+                  const ativa = visao === id
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      role="tab"
+                      aria-selected={ativa}
+                      onClick={() => setVisao(id)}
+                      className={`flex items-center gap-1.5 rounded-[5px] px-3 py-1.5 text-xs font-semibold
+                        transition-colors duration-100 focus-ring
+                        ${ativa ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted hover:text-ink'}`}
+                    >
+                      <Icon size={13} />
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -670,7 +675,7 @@ function CobrancasContent() {
             columns={colunas}
             rows={filtradas}
             rowKey={(b) => b.id}
-            onRowClick={(b) => router.push(`/titulos/${b.id}`)}
+            onRowClick={(b) => router.push(`/clientes/${b.clienteId}?tab=titulos`)}
             empty={
               <EmptyState
                 title="Nenhuma cobrança encontrada"
@@ -684,7 +689,7 @@ function CobrancasContent() {
             columns={colunasCliente}
             rows={porCliente}
             rowKey={(c) => c.clienteId}
-            onRowClick={(c) => router.push(`/clientes/${c.clienteId}`)}
+            onRowClick={(c) => router.push(`/clientes/${c.clienteId}?tab=titulos`)}
             empty={
               <EmptyState
                 title="Nenhum cliente encontrado"
@@ -700,7 +705,7 @@ function CobrancasContent() {
             comunicacoesDoBoleto={contarComunicacoes}
             todasComunicacoes={todasComunicacoesKanban}
             retornosManual={retornosManual}
-            onAbrir={(b) => router.push(`/titulos/${b.id}`)}
+            onAbrir={(b) => router.push(`/clientes/${b.clienteId}?tab=titulos`)}
             onRegistrarComunicacao={podeComunicar ? setComBoleto : undefined}
             onRetornarRegua={podeComunicar ? handleRetornarRegua : undefined}
           />

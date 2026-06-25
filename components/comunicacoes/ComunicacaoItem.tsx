@@ -120,7 +120,7 @@ export function ComunicacaoItem({ com, onEdit, onDelete }: ComunicacaoItemProps)
         </div>
       )}
 
-      {/* títulos vinculados — chips em mono; clicar abre o detalhe do título */}
+      {/* títulos vinculados — chips em mono; clicar abre o cliente na aba Títulos */}
       {com.boletoIds && com.boletoIds.length > 0 && (
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           <span className="label-mono text-ink-muted">Títulos</span>
@@ -130,7 +130,7 @@ export function ComunicacaoItem({ com, onEdit, onDelete }: ComunicacaoItemProps)
             return (
               <Link
                 key={bid}
-                href={`/titulos/${bid}`}
+                href={`/clientes/${boleto.clienteId}?tab=titulos`}
                 className="num inline-flex items-center gap-1 rounded-sm border border-steel-200
                   bg-steel-50 px-2 py-0.5 font-mono text-xs font-medium text-steel-600
                   transition-colors duration-100 hover:border-steel-300 hover:text-ink focus-ring"
