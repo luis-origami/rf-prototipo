@@ -42,7 +42,7 @@ export const PERMISSOES: Record<Perfil, {
   financeiro: {
     dashboard: true, cobrancas: true, clientes: true,
     reguas: true, templates: true, comunicacaoManual: true,
-    abonosRegistrar: true, abonosSupervisao: false,
+    abonosRegistrar: true, abonosSupervisao: true,
     configuracoes: false, usuarios: false,
   },
   comercial: {

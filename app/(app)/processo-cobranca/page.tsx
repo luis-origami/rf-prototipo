@@ -32,13 +32,12 @@ import { IconPlus, IconTrash2, IconEdit } from '../../../components/icons'
 import { WaPreview } from '../../../components/notificacoes/WaPreview'
 import { ReguaFormModal, type ReguaFormValues } from '../../../components/notificacoes/ReguaFormModal'
 import { ReguaEtapasEditor } from '../../../components/notificacoes/ReguaEtapasEditor'
-import { EtapasKanbanEditor } from '../../../components/notificacoes/EtapasKanbanEditor'
 import { type EtapaFormValues } from '../../../components/notificacoes/NovaEtapaModal'
 import { NovoTemplateModal, type TemplateFormValues } from './_components/NovoTemplateModal'
 
-type TabId = 'reguas' | 'templates' | 'kanban' | 'historico' | 'fila'
+type TabId = 'reguas' | 'templates' | 'historico' | 'fila'
 
-const TAB_IDS: TabId[] = ['reguas', 'templates', 'kanban', 'historico', 'fila']
+const TAB_IDS: TabId[] = ['reguas', 'templates', 'historico', 'fila']
 
 const STATUS_NOTIF: Record<StatusNotificacao, { label: string; dot: string }> = {
   agendada: { label: 'Agendada', dot: 'bg-info' },
@@ -249,7 +248,6 @@ function ReguasENotificacoesContent() {
   const tabs: TabItem<TabId>[] = [
     { id: 'reguas', label: 'Réguas' },
     { id: 'templates', label: 'Templates' },
-    { id: 'kanban', label: 'Etapas do Kanban' },
     { id: 'historico', label: 'Histórico', count: historico.length },
     { id: 'fila', label: 'Fila', count: fila.length },
   ]
@@ -296,8 +294,8 @@ function ReguasENotificacoesContent() {
   return (
     <>
       <PageHeader
-        eyebrow="Processo de cobrança"
-        title="Réguas e Notificações"
+        eyebrow="Cobrança"
+        title="Processo de Cobrança"
         description="A sequência de notificações de cada boleto, os textos enviados e o que já saiu."
       />
 
@@ -458,11 +456,6 @@ function ReguasENotificacoesContent() {
         </div>
       )}
 
-      {tab === 'kanban' && (
-        <div className="mt-5">
-          <EtapasKanbanEditor podeEditar={podeEditarRegua} toast={toast} />
-        </div>
-      )}
 
       {tab === 'historico' && (
         <div className="mt-5">

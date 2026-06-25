@@ -7,18 +7,18 @@ import {
   PERFIL_LABEL,
   type Usuario,
   type Perfil,
-} from '../../../lib/auth'
-import { PageHeader } from '../../../components/ui/PageHeader'
-import { Button } from '../../../components/ui/Button'
-import { Modal } from '../../../components/ui/Modal'
-import { Field } from '../../../components/ui/Field'
-import { Input } from '../../../components/ui/Input'
-import { Select } from '../../../components/ui/Select'
-import { Switch } from '../../../components/ui/Switch'
-import { Tag } from '../../../components/ui/Tag'
-import { DataTable, type Column } from '../../../components/ui/DataTable'
-import { useToast } from '../../../hooks/useToast'
-import { IconPlus } from '../../../components/icons'
+} from '../../../../lib/auth'
+import { PageHeader } from '../../../../components/ui/PageHeader'
+import { Button } from '../../../../components/ui/Button'
+import { Modal } from '../../../../components/ui/Modal'
+import { Field } from '../../../../components/ui/Field'
+import { Input } from '../../../../components/ui/Input'
+import { Select } from '../../../../components/ui/Select'
+import { Switch } from '../../../../components/ui/Switch'
+import { Tag } from '../../../../components/ui/Tag'
+import { DataTable, type Column } from '../../../../components/ui/DataTable'
+import { useToast } from '../../../../hooks/useToast'
+import { IconPlus } from '../../../../components/icons'
 
 interface FormState {
   nome: string

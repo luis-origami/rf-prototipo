@@ -6,11 +6,8 @@ import { usePathname } from 'next/navigation'
 import {
   IconDashboard,
   IconCreditCard,
-  IconUsers2,
   IconMessageSquare,
-  IconPercent,
   IconSettings,
-  IconUserCog,
 } from '../icons'
 import { podeAcessar, type Perfil, PERMISSOES } from '../../lib/auth'
 
@@ -21,14 +18,13 @@ interface NavItem {
   recurso: keyof (typeof PERMISSOES)['admin']
 }
 
+// Títulos absorve a antiga lista de Clientes (agora um filtro). Admin é o hub
+// de Gestão de Usuários e Parametrizações.
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', Icon: IconDashboard, recurso: 'dashboard' },
-  { href: '/cobrancas', label: 'Cobranças', Icon: IconCreditCard, recurso: 'cobrancas' },
-  { href: '/clientes', label: 'Clientes', Icon: IconUsers2, recurso: 'clientes' },
-  { href: '/notificacoes', label: 'Réguas e Notificações', Icon: IconMessageSquare, recurso: 'reguas' },
-  { href: '/abonos', label: 'Negociações', Icon: IconPercent, recurso: 'abonosSupervisao' },
-  { href: '/configuracoes', label: 'Configurações', Icon: IconSettings, recurso: 'configuracoes' },
-  { href: '/usuarios', label: 'Usuários', Icon: IconUserCog, recurso: 'usuarios' },
+  { href: '/titulos', label: 'Títulos', Icon: IconCreditCard, recurso: 'cobrancas' },
+  { href: '/processo-cobranca', label: 'Processo de Cobrança', Icon: IconMessageSquare, recurso: 'reguas' },
+  { href: '/admin', label: 'Admin', Icon: IconSettings, recurso: 'configuracoes' },
 ]
 
 interface SidebarProps {
@@ -60,7 +56,11 @@ export function Sidebar({ perfil, onNavigate }: SidebarProps) {
       <nav className="flex flex-col gap-0.5 px-3">
         {NAV_ITEMS.map(({ href, label, Icon, recurso }) => {
           if (!podeAcessar(perfil, recurso)) return null
-          const active = pathname === href || pathname.startsWith(href + '/')
+          // Títulos absorve o detalhe de cliente (/clientes/[id]) — acende junto
+          const active =
+            pathname === href ||
+            pathname.startsWith(href + '/') ||
+            (href === '/titulos' && pathname.startsWith('/clientes'))
           return (
             <Link
               key={href}

@@ -73,13 +73,13 @@ export default function Dashboard() {
       [91, 180],
       [181, null],
     ]
-    if (i === 0) { router.push('/cobrancas?venc_de=' + DATA_BASE); return }
+    if (i === 0) { router.push('/titulos?venc_de=' + DATA_BASE); return }
     const r = ranges[i]
     if (!r) return
     const params = r[1] != null
       ? `atraso_de=${r[0]}&atraso_ate=${r[1]}`
       : `atraso_de=${r[0]}`
-    router.push(`/cobrancas?${params}`)
+    router.push(`/titulos?${params}`)
   }, [router])
 
   function sincronizar() {
@@ -146,7 +146,6 @@ export default function Dashboard() {
         <Card>
           <Card.Header>
             <Card.Title>Previsto × recebido</Card.Title>
-            <span className="label-mono text-ink-muted">12 meses</span>
           </Card.Header>
           <Card.Body>
             <PrevistoRecebidoChart dados={previstoRecebido} />
@@ -171,7 +170,7 @@ export default function Dashboard() {
         <Card>
           <Card.Header>
             <Card.Title>Evolução da inadimplência</Card.Title>
-            <span className="label-mono text-ink-muted">12 meses · por faixa de aging</span>
+            <span className="label-mono text-ink-muted">por faixa de aging</span>
           </Card.Header>
           <Card.Body>
             <EvolucaoInadimplenciaChart dados={evolucao} />
@@ -182,7 +181,6 @@ export default function Dashboard() {
         <Card className="flex flex-col">
           <Card.Header>
             <Card.Title>Inadimplência X Recuperação</Card.Title>
-            <span className="label-mono text-ink-muted">12 meses</span>
           </Card.Header>
           <Card.Body className="flex grow flex-col justify-center">
             <InadimplenciaRecuperadoChart dados={evolucao} />
@@ -195,7 +193,7 @@ export default function Dashboard() {
         <Card>
           <Card.Header>
             <Card.Title>Recebimento por segmento de cliente</Card.Title>
-            <span className="label-mono text-ink-muted">12 meses · % realização</span>
+            <span className="label-mono text-ink-muted">% realização</span>
           </Card.Header>
           <Card.Body>
             <RecebimentoTipoChart />

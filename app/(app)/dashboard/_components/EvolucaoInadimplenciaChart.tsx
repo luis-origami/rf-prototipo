@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatarMoeda, FAIXAS_AGING, FAIXAS_AGING_DIAS, type EvolucaoMes } from '../../../../mocks'
 import { useTooltipClamp } from './useTooltipClamp'
+import { PeriodoFiltro, type Periodo } from './PeriodoFiltro'
 
 /* Evolução da inadimplência por faixa de aging — barras empilhadas mês a mês.
    Uma cor por faixa, na régua de severidade do DS: quanto mais antiga a
@@ -31,16 +32,19 @@ interface EvolucaoInadimplenciaChartProps {
   dados: EvolucaoMes[]
 }
 
-export function EvolucaoInadimplenciaChart({ dados }: EvolucaoInadimplenciaChartProps) {
+export function EvolucaoInadimplenciaChart({ dados: dadosFull }: EvolucaoInadimplenciaChartProps) {
   const router = useRouter()
   const [ativo, setAtivo] = useState<{ mes: number; faixa: number } | null>(null)
+  const [periodo, setPeriodo] = useState<Periodo>(12)
+  // recorta a janela visível às últimas N posições da série
+  const dados = dadosFull.slice(-periodo)
 
   function navegarFaixa(fi: number) {
     const [de, ate] = FAIXAS_AGING_DIAS[fi]
     const params = ate != null
       ? `atraso_de=${de}&atraso_ate=${ate}`
       : `atraso_de=${de}`
-    router.push(`/cobrancas?${params}`)
+    router.push(`/titulos?${params}`)
   }
 
   const totais = dados.map((d) => d.faixas.reduce((s, v) => s + v, 0))
@@ -57,6 +61,10 @@ export function EvolucaoInadimplenciaChart({ dados }: EvolucaoInadimplenciaChart
 
   return (
     <div>
+      <div className="mb-2 flex justify-end">
+        <PeriodoFiltro value={periodo} onChange={setPeriodo} />
+      </div>
+
       <div ref={wrapRef} className="relative pt-16">
         {/* tooltip — ancorado na coluna ativa, dentro do espaço reservado */}
         {sel && (

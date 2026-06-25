@@ -130,7 +130,7 @@ export function ComunicacaoItem({ com, onEdit, onDelete }: ComunicacaoItemProps)
             return (
               <Link
                 key={bid}
-                href={`/cobrancas/${bid}`}
+                href={`/titulos/${bid}`}
                 className="num inline-flex items-center gap-1 rounded-sm border border-steel-200
                   bg-steel-50 px-2 py-0.5 font-mono text-xs font-medium text-steel-600
                   transition-colors duration-100 hover:border-steel-300 hover:text-ink focus-ring"

@@ -14,18 +14,22 @@ import {
   formatarMoeda,
   formatarData,
   statusEfetivo,
+  situacaoEfetiva,
   ORDEM_SEVERIDADE,
   MULTA_PCT,
   JUROS_MES_PCT,
   type Boleto,
   type Comunicacao,
   type StatusBoleto,
+  type TipoCliente,
+  type SituacaoCliente,
+  type EstadoProcesso,
 } from '../../../mocks'
 import { abonoAplicadoDoBoleto, abonaJuros, abonaMulta, processarAbonoDaComunicacao } from '../../../lib/abonos'
 import { registrarRetornoManual } from '../../../lib/negociacoes'
 import { useAbonos } from '../../../hooks/useAbonos'
 import { useNegociacoes } from '../../../hooks/useNegociacoes'
-import { colunaDoBoleto } from '../../../lib/kanban'
+import { colunaDoBoleto, resolverNegociacao } from '../../../lib/kanban'
 import { useColunasKanban } from '../../../hooks/useColunasKanban'
 import { getSession, podeAcessar } from '../../../lib/auth'
 import { PageHeader } from '../../../components/ui/PageHeader'
@@ -43,7 +47,7 @@ import { EmptyState } from '../../../components/ui/EmptyState'
 import { Field } from '../../../components/ui/Field'
 import { Textarea } from '../../../components/ui/Textarea'
 import { useToast } from '../../../hooks/useToast'
-import { IconKanban, IconSettings, IconTable } from '../../../components/icons'
+import { IconKanban, IconTable, IconUsers2 } from '../../../components/icons'
 import { KanbanBoard } from './_components/KanbanBoard'
 import {
   ComunicacaoForm,
@@ -88,9 +92,43 @@ const ABONO_OPTIONS: DropdownOption[] = [
   { value: 'cancelado', label: 'Abono cancelado' },
 ]
 
+/* segmento do cliente — a antiga tela de Clientes virou este filtro dentro de
+   Títulos; o nome do cliente em cada linha leva ao detalhe */
+const TIPO_CLIENTE_LABEL: Record<TipoCliente, string> = {
+  oficina: 'Oficina',
+  transportadora: 'Transportadora',
+  revenda: 'Revenda',
+  frotista: 'Frotista',
+  pf: 'Pessoa física',
+  produtor: 'Produtor rural',
+  orgao_publico: 'Órgão público',
+}
+const TIPO_CLIENTE_OPTIONS: DropdownOption[] = (Object.keys(TIPO_CLIENTE_LABEL) as TipoCliente[]).map(
+  (t) => ({ value: t, label: TIPO_CLIENTE_LABEL[t] }),
+)
+
+/* estado de negociação do título — derivado das comunicações/promessas */
+const NEGOCIACAO_OPTIONS: DropdownOption[] = [
+  { value: 'em_negociacao', label: 'Em negociação' },
+  { value: 'quebrada', label: 'Promessa quebrada' },
+]
+
 const ISO_DATA = /^\d{4}-\d{2}-\d{2}$/
 
-type Visao = 'tabela' | 'kanban'
+type Visao = 'tabela' | 'cliente' | 'kanban'
+
+/* linha consolidada por cliente — uma entrada por cliente com o total em aberto
+   dos seus títulos (em vez de repetir o cliente por título) */
+interface ClienteAgrupado {
+  clienteId: string
+  nome: string
+  tipo: TipoCliente
+  qtde: number
+  emAberto: number
+  totalAtualizado: number
+  estadoProcesso: EstadoProcesso
+  situacao: SituacaoCliente
+}
 
 function CobrancasContent() {
   const router = useRouter()
@@ -107,7 +145,6 @@ function CobrancasContent() {
   const { toast, toastHost } = useToast()
   const sessao = getSession()
   const podeComunicar = podeAcessar(sessao?.perfil ?? 'comercial', 'comunicacaoManual')
-  const podeOperarRegua = podeAcessar(sessao?.perfil ?? 'comercial', 'reguas')
 
   // alternar a visão preserva todos os filtros — o estado é o mesmo
   const [visao, setVisao] = useState<Visao>('tabela')
@@ -116,6 +153,8 @@ function CobrancasContent() {
   const [empresaFiltro, setEmpresaFiltro] = useState<Set<string>>(new Set())
   const [reguaFiltro, setReguaFiltro] = useState<Set<string>>(new Set())
   const [abonoFiltro, setAbonoFiltro] = useState<Set<string>>(new Set())
+  const [tipoFiltro, setTipoFiltro] = useState<Set<string>>(new Set())
+  const [negociacaoFiltro, setNegociacaoFiltro] = useState<Set<string>>(new Set())
   const [vencDe, setVencDe] = useState(ISO_DATA.test(deUrl) ? deUrl : '')
   const [vencAte, setVencAte] = useState(ISO_DATA.test(ateUrl) ? ateUrl : '')
   const [atrasoDe, setAtrasoDe] = useState<number | null>(atrasoDeUrl ? Number(atrasoDeUrl) : null)
@@ -136,6 +175,7 @@ function CobrancasContent() {
       .filter((b) => {
         if (empresaFiltro.size > 0 && !empresaFiltro.has(getEmpresaDoBoleto(b))) return false
         if (statusFiltro.size > 0 && !statusFiltro.has(statusEfetivo(b))) return false
+        if (tipoFiltro.size > 0 && !tipoFiltro.has(getClienteById(b.clienteId)?.tipo ?? '')) return false
         if (
           abonoFiltro.size > 0 &&
           !abonos.some((a) => a.boletoIds.includes(b.id) && abonoFiltro.has(a.estado))
@@ -147,6 +187,19 @@ function CobrancasContent() {
           const dias = b.diasAtraso ?? 0
           if (dias < atrasoDe) return false
           if (atrasoAte != null && dias > atrasoAte) return false
+        }
+        if (negociacaoFiltro.size > 0) {
+          const coms = [
+            ...getComunicacoesDoBoleto(b.id),
+            ...comunicacoesExtras.filter((c) => c.boletoIds?.includes(b.id)),
+          ]
+          const neg = resolverNegociacao(b.id, coms, retornosManual)
+          const querEm = negociacaoFiltro.has('em_negociacao')
+          const querQuebrada = negociacaoFiltro.has('quebrada')
+          if (querEm && querQuebrada) {
+            if (!neg.emNegociacao && !neg.promessaQuebrada) return false
+          } else if (querEm && !neg.emNegociacao) return false
+          else if (querQuebrada && !neg.promessaQuebrada) return false
         }
         if (!q) return true
         const cliente = getClienteById(b.clienteId)
@@ -162,7 +215,36 @@ function CobrancasContent() {
         const pagoB = b.status === 'pago' || b.status === 'pago_atraso' ? 1 : 0
         return pagoA - pagoB || a.vencimento.localeCompare(b.vencimento)
       })
-  }, [query, statusFiltro, empresaFiltro, abonoFiltro, abonos, vencDe, vencAte, atrasoDe, atrasoAte])
+  }, [query, statusFiltro, empresaFiltro, tipoFiltro, abonoFiltro, abonos, negociacaoFiltro, comunicacoesExtras, retornosManual, vencDe, vencAte, atrasoDe, atrasoAte])
+
+  // consolidação por cliente — uma linha por cliente, somando o valor em aberto
+  const porCliente = useMemo<ClienteAgrupado[]>(() => {
+    const map = new Map<string, ClienteAgrupado>()
+    for (const b of filtradas) {
+      const c = getClienteById(b.clienteId)
+      if (!c) continue
+      let row = map.get(c.id)
+      if (!row) {
+        row = {
+          clienteId: c.id,
+          nome: c.nome,
+          tipo: c.tipo,
+          qtde: 0,
+          emAberto: 0,
+          totalAtualizado: 0,
+          estadoProcesso: c.estadoProcesso,
+          situacao: situacaoEfetiva(c),
+        }
+        map.set(c.id, row)
+      }
+      row.qtde += 1
+      if (b.status !== 'pago' && b.status !== 'pago_atraso') {
+        row.emAberto += b.valor
+        row.totalAtualizado += calcularEncargos(b)?.totalAtualizado ?? b.valor
+      }
+    }
+    return [...map.values()].sort((a, b) => b.emAberto - a.emAberto)
+  }, [filtradas])
 
   // Kanban: só títulos em aberto, dentro da régua (com marco atingido — senão
   // o contador divergiria do board) + filtro de régua
@@ -285,7 +367,20 @@ function CobrancasContent() {
       key: 'cliente',
       header: 'Cliente',
       sortValue: (b) => getClienteById(b.clienteId)?.nome ?? '',
-      render: (b) => <span className="font-medium text-ink">{getClienteById(b.clienteId)?.nome ?? '—'}</span>,
+      render: (b) => {
+        const c = getClienteById(b.clienteId)
+        if (!c) return <span className="font-medium text-ink">—</span>
+        // nome leva ao detalhe do cliente; stopPropagation evita abrir o título
+        return (
+          <Link
+            href={`/clientes/${c.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="font-medium text-ink hover:text-link hover:underline focus-ring rounded-sm"
+          >
+            {c.nome}
+          </Link>
+        )
+      },
     },
     {
       key: 'boleto',
@@ -357,143 +452,225 @@ function CobrancasContent() {
     },
   ]
 
+  const colunasCliente: Column<ClienteAgrupado>[] = [
+    {
+      key: 'cliente',
+      header: 'Cliente',
+      sortValue: (c) => c.nome,
+      render: (c) => (
+        <Link
+          href={`/clientes/${c.clienteId}`}
+          onClick={(e) => e.stopPropagation()}
+          className="font-medium text-ink hover:text-link hover:underline focus-ring rounded-sm"
+        >
+          {c.nome}
+        </Link>
+      ),
+    },
+    {
+      key: 'tipo',
+      header: 'Tipo',
+      sortValue: (c) => TIPO_CLIENTE_LABEL[c.tipo],
+      render: (c) => <span className="text-neutral-700">{TIPO_CLIENTE_LABEL[c.tipo]}</span>,
+    },
+    {
+      key: 'qtde',
+      header: 'Títulos',
+      numeric: true,
+      sortValue: (c) => c.qtde,
+      render: (c) => <span className="num font-mono text-neutral-700">{c.qtde}</span>,
+    },
+    {
+      key: 'aberto',
+      header: 'Em aberto',
+      numeric: true,
+      certtus: true,
+      sortValue: (c) => c.emAberto,
+      render: (c) =>
+        c.emAberto > 0 ? <Money value={c.emAberto} /> : <span className="text-ink-muted">—</span>,
+    },
+    {
+      key: 'total',
+      header: 'Total atualizado',
+      numeric: true,
+      sortValue: (c) => c.totalAtualizado,
+      render: (c) =>
+        c.totalAtualizado > 0 ? <Money value={c.totalAtualizado} /> : <span className="text-ink-muted">—</span>,
+    },
+    {
+      key: 'sit',
+      header: 'Situação',
+      center: true,
+      sortValue: (c) => ORDEM_SEVERIDADE[c.situacao],
+      render: (c) => <StatusBadge status={c.situacao} />,
+    },
+    {
+      key: 'proc',
+      header: 'Régua',
+      sortValue: (c) => c.estadoProcesso,
+      render: (c) =>
+        c.estadoProcesso === 'normal' ? (
+          <span className="text-ink-muted">—</span>
+        ) : (
+          <ProcessBadge estado={c.estadoProcesso} />
+        ),
+    },
+  ]
+
   const visiveis = visao === 'kanban' ? boletosKanban : filtradas
   const totalFiltrado = visiveis.reduce((s, b) => s + b.valor, 0)
+  const totalEmAberto = porCliente.reduce((s, c) => s + c.emAberto, 0)
   const intervaloAtivo = Boolean(vencDe || vencAte)
 
   return (
     <>
       <PageHeader
         eyebrow="Operação"
-        title="Cobranças"
+        title="Títulos"
         description={
           visao === 'kanban'
             ? 'Títulos em aberto organizados por estágio de cobrança — a coluna é derivada do marco da régua.'
-            : 'Todos os boletos lidos do Certtus, ordenados do mais urgente para o mais distante.'
+            : visao === 'cliente'
+              ? 'Títulos consolidados por cliente — uma linha por cliente com o total em aberto.'
+              : 'Todos os boletos lidos do Certtus, ordenados do mais urgente para o mais distante.'
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <SearchInput
-          value={query}
-          onChange={setQuery}
-          placeholder="Cliente, boleto ou NF…"
-          className="w-full sm:w-72"
-        />
-        <MultiSelectDropdown
-          selected={empresaFiltro}
-          onChange={setEmpresaFiltro}
-          options={EMPRESA_OPTIONS}
-          placeholder="Empresa"
-        />
-        <MultiSelectDropdown
-          selected={statusFiltro}
-          onChange={setStatusFiltro}
-          options={STATUS_OPTIONS}
-          placeholder="Status"
-        />
-        {/* régua de cobrança — filtro principal do Kanban */}
-        {visao === 'kanban' && (
+      <div className="flex flex-col gap-3">
+        {/* linha 1 — busca à esquerda; contagem + alternador de visão à direita */}
+        <div className="flex flex-wrap items-center gap-3">
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            placeholder="Cliente, boleto ou NF…"
+            className="w-full sm:w-72"
+          />
+
+          <div className="ml-auto flex items-center gap-3">
+            <span className="num font-mono text-xs text-ink-muted">
+              {visao === 'cliente'
+                ? `${porCliente.length} clientes · ${formatarMoeda(totalEmAberto)}`
+                : `${visiveis.length} boletos · ${formatarMoeda(totalFiltrado)}`}
+            </span>
+
+            {/* alternador de visão — troca preserva os filtros ativos */}
+            <div className="flex rounded-md border border-line-strong bg-neutral-100 p-0.5" role="tablist" aria-label="Visão da lista">
+              {(
+                [
+                  { id: 'tabela' as Visao, label: 'Tabela', Icon: IconTable },
+                  { id: 'cliente' as Visao, label: 'Por cliente', Icon: IconUsers2 },
+                  { id: 'kanban' as Visao, label: 'Kanban', Icon: IconKanban },
+                ]
+              ).map(({ id, label, Icon }) => {
+                const ativa = visao === id
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={ativa}
+                    onClick={() => setVisao(id)}
+                    className={`flex items-center gap-1.5 rounded-[5px] px-3 py-1.5 text-xs font-semibold
+                      transition-colors duration-100 focus-ring
+                      ${ativa ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted hover:text-ink'}`}
+                  >
+                    <Icon size={13} />
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* linha 2 — filtros em ordem: empresa, status, tipo, abono, negociação,
+            [régua, só no Kanban] e o intervalo de vencimento por último */}
+        <div className="flex flex-wrap items-center gap-2">
           <MultiSelectDropdown
-            selected={reguaFiltro}
-            onChange={setReguaFiltro}
-            options={REGUA_OPTIONS}
-            placeholder="Régua"
+            selected={empresaFiltro}
+            onChange={setEmpresaFiltro}
+            options={EMPRESA_OPTIONS}
+            placeholder="Empresa"
           />
-        )}
-        {/* intervalo de vencimento — combinável com busca, status e empresa */}
-        <div className="flex items-center gap-2">
-          <label className="label-mono text-ink-muted" htmlFor="venc-de">
-            Vencimento
-          </label>
-          <Input
-            id="venc-de"
-            type="date"
-            aria-label="Vencimento — data inicial"
-            value={vencDe}
-            onChange={(e) => setVencDe(e.target.value)}
-            className="w-40"
+          <MultiSelectDropdown
+            selected={statusFiltro}
+            onChange={setStatusFiltro}
+            options={STATUS_OPTIONS}
+            placeholder="Status"
           />
-          <span className="text-sm text-ink-muted">a</span>
-          <Input
-            type="date"
-            aria-label="Vencimento — data final"
-            value={vencAte}
-            onChange={(e) => setVencAte(e.target.value)}
-            className="w-40"
+          <MultiSelectDropdown
+            selected={tipoFiltro}
+            onChange={setTipoFiltro}
+            options={TIPO_CLIENTE_OPTIONS}
+            placeholder="Tipo de cliente"
           />
-          {/* sempre renderizado — o espaço fica reservado e a linha de filtros
-              não reflui quando uma data é preenchida */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => { setVencDe(''); setVencAte('') }}
-            className={intervaloAtivo ? '' : 'invisible'}
-            aria-hidden={!intervaloAtivo}
-            tabIndex={intervaloAtivo ? undefined : -1}
-          >
-            Limpar datas
-          </Button>
+          <MultiSelectDropdown
+            selected={abonoFiltro}
+            onChange={setAbonoFiltro}
+            options={ABONO_OPTIONS}
+            placeholder="Com abono"
+          />
+          <MultiSelectDropdown
+            selected={negociacaoFiltro}
+            onChange={setNegociacaoFiltro}
+            options={NEGOCIACAO_OPTIONS}
+            placeholder="Negociação"
+          />
+          {visao === 'kanban' && (
+            <MultiSelectDropdown
+              selected={reguaFiltro}
+              onChange={setReguaFiltro}
+              options={REGUA_OPTIONS}
+              placeholder="Régua"
+            />
+          )}
+
+          {/* divisor sutil antes do intervalo de datas */}
+          <div className="mx-1 hidden h-6 w-px bg-line lg:block" />
+
+          {/* intervalo de vencimento */}
+          <div className="flex items-center gap-2">
+            <label className="label-mono text-ink-muted" htmlFor="venc-de">
+              Vencimento
+            </label>
+            <Input
+              id="venc-de"
+              type="date"
+              aria-label="Vencimento — data inicial"
+              value={vencDe}
+              onChange={(e) => setVencDe(e.target.value)}
+              className="w-40"
+            />
+            <span className="text-sm text-ink-muted">a</span>
+            <Input
+              type="date"
+              aria-label="Vencimento — data final"
+              value={vencAte}
+              onChange={(e) => setVencAte(e.target.value)}
+              className="w-40"
+            />
+            {/* sempre renderizado — o espaço fica reservado e a linha não reflui */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setVencDe(''); setVencAte('') }}
+              className={intervaloAtivo ? '' : 'invisible'}
+              aria-hidden={!intervaloAtivo}
+              tabIndex={intervaloAtivo ? undefined : -1}
+            >
+              Limpar datas
+            </Button>
+          </div>
         </div>
-        {/* títulos com abono de encargos, por estado do abono */}
-        <MultiSelectDropdown
-          selected={abonoFiltro}
-          onChange={setAbonoFiltro}
-          options={ABONO_OPTIONS}
-          placeholder="Com abono"
-        />
-
-        <span className="num ml-auto font-mono text-xs text-ink-muted">
-          {visiveis.length} boletos · {formatarMoeda(totalFiltrado)}
-        </span>
-
-        {/* alternador de visão — troca preserva os filtros ativos */}
-        <div className="flex rounded-md border border-line-strong bg-neutral-100 p-0.5" role="tablist" aria-label="Visão da lista">
-          {(
-            [
-              { id: 'tabela' as Visao, label: 'Tabela', Icon: IconTable },
-              { id: 'kanban' as Visao, label: 'Kanban', Icon: IconKanban },
-            ]
-          ).map(({ id, label, Icon }) => {
-            const ativa = visao === id
-            return (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={ativa}
-                onClick={() => setVisao(id)}
-                className={`flex items-center gap-1.5 rounded-[5px] px-3 py-1.5 text-xs font-semibold
-                  transition-colors duration-100 focus-ring
-                  ${ativa ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted hover:text-ink'}`}
-              >
-                <Icon size={13} />
-                {label}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* gestão de etapas vive em Réguas e Notificações — aqui só o atalho */}
-        {visao === 'kanban' && podeOperarRegua && (
-          <Link
-            href="/notificacoes?tab=kanban"
-            className="inline-flex items-center gap-1.5 rounded-sm text-sm font-medium text-link
-              hover:underline focus-ring"
-          >
-            <IconSettings size={14} />
-            Gerenciar etapas
-          </Link>
-        )}
       </div>
 
       <div className="mt-4">
-        {visao === 'tabela' ? (
+        {visao === 'tabela' && (
           <DataTable
             columns={colunas}
             rows={filtradas}
             rowKey={(b) => b.id}
-            onRowClick={(b) => router.push(`/cobrancas/${b.id}`)}
+            onRowClick={(b) => router.push(`/titulos/${b.id}`)}
             empty={
               <EmptyState
                 title="Nenhuma cobrança encontrada"
@@ -501,14 +678,29 @@ function CobrancasContent() {
               />
             }
           />
-        ) : (
+        )}
+        {visao === 'cliente' && (
+          <DataTable
+            columns={colunasCliente}
+            rows={porCliente}
+            rowKey={(c) => c.clienteId}
+            onRowClick={(c) => router.push(`/clientes/${c.clienteId}`)}
+            empty={
+              <EmptyState
+                title="Nenhum cliente encontrado"
+                description="Ajuste a busca ou os filtros."
+              />
+            }
+          />
+        )}
+        {visao === 'kanban' && (
           <KanbanBoard
             boletos={boletosKanban}
             colunas={colunasKanban}
             comunicacoesDoBoleto={contarComunicacoes}
             todasComunicacoes={todasComunicacoesKanban}
             retornosManual={retornosManual}
-            onAbrir={(b) => router.push(`/cobrancas/${b.id}`)}
+            onAbrir={(b) => router.push(`/titulos/${b.id}`)}
             onRegistrarComunicacao={podeComunicar ? setComBoleto : undefined}
             onRetornarRegua={podeComunicar ? handleRetornarRegua : undefined}
           />

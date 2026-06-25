@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatarMoeda, type EvolucaoMes } from '../../../../mocks'
 import { useTooltipClamp } from './useTooltipClamp'
+import { PeriodoFiltro, type Periodo } from './PeriodoFiltro'
 
 /* Inadimplência X Recuperação — pares de barras por mês: o estoque
    inadimplente (vinho, severidade máxima da régua) ao lado do valor
@@ -22,9 +23,12 @@ interface InadimplenciaRecuperadoChartProps {
   dados: EvolucaoMes[]
 }
 
-export function InadimplenciaRecuperadoChart({ dados }: InadimplenciaRecuperadoChartProps) {
+export function InadimplenciaRecuperadoChart({ dados: dadosFull }: InadimplenciaRecuperadoChartProps) {
   const router = useRouter()
   const [ativo, setAtivo] = useState<number | null>(null)
+  const [periodo, setPeriodo] = useState<Periodo>(12)
+  // recorta a janela visível às últimas N posições da série
+  const dados = dadosFull.slice(-periodo)
 
   const totais = dados.map((d) => d.faixas.reduce((s, v) => s + v, 0))
   const max = Math.max(...totais, 1)
@@ -39,6 +43,10 @@ export function InadimplenciaRecuperadoChart({ dados }: InadimplenciaRecuperadoC
 
   return (
     <div>
+      <div className="mb-2 flex justify-end">
+        <PeriodoFiltro value={periodo} onChange={setPeriodo} />
+      </div>
+
       <div ref={wrapRef} className="relative pt-20">
         {/* tooltip — mês ativo, valores e taxa de recuperação */}
         {sel && (
@@ -73,7 +81,7 @@ export function InadimplenciaRecuperadoChart({ dados }: InadimplenciaRecuperadoC
               key={d.mes}
               type="button"
               aria-label={`${rotuloMes(d.mes)}: inadimplente ${formatarMoeda(totais[i])}, recuperado ${formatarMoeda(d.recuperado)}`}
-              onClick={() => router.push(`/cobrancas?venc_de=${d.mes}-01&venc_ate=${d.mes}-31`)}
+              onClick={() => router.push(`/titulos?venc_de=${d.mes}-01&venc_ate=${d.mes}-31`)}
               onMouseEnter={() => setAtivo(i)}
               onMouseLeave={() => setAtivo(null)}
               onFocus={() => setAtivo(i)}

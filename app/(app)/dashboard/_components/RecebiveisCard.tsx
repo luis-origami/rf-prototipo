@@ -66,7 +66,7 @@ export function RecebiveisCard({ boletos, ativas, onToggle }: RecebiveisCardProp
     }
     const de = addDias(faixa.de)
     const ate = addDias(faixa.ate)
-    router.push(`/cobrancas?venc_de=${de}&venc_ate=${ate}`)
+    router.push(`/titulos?venc_de=${de}&venc_ate=${ate}`)
   }
 
   // recorte compartilhado com a seção de forma de pagamento

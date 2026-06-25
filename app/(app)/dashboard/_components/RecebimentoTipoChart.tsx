@@ -10,6 +10,7 @@ import {
   type RecebimentoTipoMes,
 } from '../../../../mocks'
 import { useTooltipClamp } from './useTooltipClamp'
+import { PeriodoFiltro, type Periodo } from './PeriodoFiltro'
 
 /* Recebimento por segmento de cliente — % de realização mês a mês.
    Barra empilhada: verde (recebido, baixo) + vermelho-suave (pendente, topo).
@@ -30,9 +31,12 @@ const TIPOS_FILTRO: TipoClienteFiltro[] = [
 export function RecebimentoTipoChart() {
   const router = useRouter()
   const [tipo, setTipo] = useState<TipoClienteFiltro>('todos')
+  const [periodo, setPeriodo] = useState<Periodo>(12)
   const [ativo, setAtivo] = useState<number | null>(null)
 
-  const dados: RecebimentoTipoMes[] = getRecebimentosPorTipo(tipo)
+  // recorta a janela visível às últimas N posições da série; os KPIs e o
+  // gráfico passam a refletir o período selecionado
+  const dados: RecebimentoTipoMes[] = getRecebimentosPorTipo(tipo).slice(-periodo)
   const max = Math.max(...dados.map((d) => d.aReceber), 1)
 
   const totalAReceber = dados.reduce((s, d) => s + d.aReceber, 0)
@@ -47,8 +51,9 @@ export function RecebimentoTipoChart() {
 
   return (
     <div>
-      {/* filtro por tipo de cliente */}
-      <div className="mb-5 flex flex-wrap gap-2">
+      {/* filtros — tipo de cliente à esquerda, período à direita */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
         {TIPOS_FILTRO.map((t) => (
           <button
             key={t}
@@ -64,9 +69,11 @@ export function RecebimentoTipoChart() {
             {TIPO_CLIENTE_LABEL[t]}
           </button>
         ))}
+        </div>
+        <PeriodoFiltro value={periodo} onChange={setPeriodo} />
       </div>
 
-      {/* KPIs resumidos — 4 valores no período completo (12 meses) */}
+      {/* KPIs resumidos — 4 valores no período selecionado */}
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="flex flex-col gap-0.5">
           <span className="label-mono text-ink-muted">A receber</span>
@@ -130,7 +137,7 @@ export function RecebimentoTipoChart() {
               <button
                 type="button"
                 aria-label={`${rotuloMes(d.mes)}: ${d.pctRealizacao}% realização — recebido ${formatarMoeda(d.recebido)}, pendente ${formatarMoeda(d.pendente)}`}
-                onClick={() => router.push(`/cobrancas?venc_de=${d.mes}-01&venc_ate=${d.mes}-31`)}
+                onClick={() => router.push(`/titulos?venc_de=${d.mes}-01&venc_ate=${d.mes}-31`)}
                 onMouseEnter={() => setAtivo(i)}
                 onMouseLeave={() => setAtivo(null)}
                 onFocus={() => setAtivo(i)}

@@ -25,11 +25,14 @@ Abra [http://localhost:3000](http://localhost:3000) — você será redirecionad
 | Rota                    | Tela                      | Descrição                                                             |
 |-------------------------|---------------------------|-----------------------------------------------------------------------|
 | `/dashboard`            | Dashboard                 | KPIs, aging de recebíveis, top inadimplentes, métricas operacionais   |
-| `/cobrancas`            | Cobranças                 | Tabela densa de boletos, tabs por estado, filtros, busca              |
-| `/clientes`             | Lista de Clientes         | 40 clientes com filtro por situação, tipo e busca                     |
+| `/titulos`              | Títulos                   | Tabela densa de boletos + Kanban, filtros (incl. tipo de cliente), busca |
 | `/clientes/[id]`        | Detalhe do Cliente        | Timeline da régua, boletos, histórico de notificações, ações          |
-| `/notificacoes`         | Notificações              | Editor de templates, preview WhatsApp, histórico, fila                |
-| `/configuracoes`        | Configurações             | Integração Certtus (status, log, mapeamento) + editor de réguas       |
+| `/clientes/[id]/regua/editar` | Editar régua do cliente | Edição dedicada dos marcos da régua específica                  |
+| `/processo-cobranca`    | Processo de Cobrança      | Réguas, editor de templates, preview WhatsApp, histórico, fila        |
+| `/admin`                | Admin                     | Hub: Gestão de Usuários e Parametrizações                             |
+| `/admin/usuarios`       | Gestão de Usuários        | CRUD de usuários e perfis                                             |
+| `/admin/parametrizacoes`| Parametrizações           | Parâmetros de encargos + Integração Certtus (status, log, mapeamento) |
+| `/abonos`               | Negociações               | Supervisão de negociações e abonos                                   |
 
 ---
 

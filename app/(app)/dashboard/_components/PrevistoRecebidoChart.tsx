@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatarMoeda, type PrevistoRecebidoMes } from '../../../../mocks'
 import { useTooltipClamp } from './useTooltipClamp'
+import { PeriodoFiltro, type Periodo } from './PeriodoFiltro'
 
 /* Previsto × recebido mês a mês — pares de barras por mês. Previsto em aço
    claro (expectativa), recebido em verde (dinheiro confirmado — único uso de
@@ -21,9 +22,12 @@ interface PrevistoRecebidoChartProps {
   dados: PrevistoRecebidoMes[]
 }
 
-export function PrevistoRecebidoChart({ dados }: PrevistoRecebidoChartProps) {
+export function PrevistoRecebidoChart({ dados: dadosFull }: PrevistoRecebidoChartProps) {
   const router = useRouter()
   const [ativo, setAtivo] = useState<number | null>(null)
+  const [periodo, setPeriodo] = useState<Periodo>(12)
+  // recorta a janela visível às últimas N posições da série
+  const dados = dadosFull.slice(-periodo)
   const max = Math.max(...dados.map((d) => d.previsto), 1)
 
   const sel = ativo != null ? dados[ativo] : null
@@ -35,6 +39,10 @@ export function PrevistoRecebidoChart({ dados }: PrevistoRecebidoChartProps) {
 
   return (
     <div>
+      <div className="mb-2 flex justify-end">
+        <PeriodoFiltro value={periodo} onChange={setPeriodo} />
+      </div>
+
       <div ref={wrapRef} className="relative pt-20">
         {/* tooltip — mês ativo, valores e realização */}
         {sel && (
@@ -69,7 +77,7 @@ export function PrevistoRecebidoChart({ dados }: PrevistoRecebidoChartProps) {
               key={d.mes}
               type="button"
               aria-label={`${rotuloMes(d.mes)}: previsto ${formatarMoeda(d.previsto)}, recebido ${formatarMoeda(d.recebido)}`}
-              onClick={() => router.push(`/cobrancas?venc_de=${d.mes}-01&venc_ate=${d.mes}-31`)}
+              onClick={() => router.push(`/titulos?venc_de=${d.mes}-01&venc_ate=${d.mes}-31`)}
               onMouseEnter={() => setAtivo(i)}
               onMouseLeave={() => setAtivo(null)}
               onFocus={() => setAtivo(i)}

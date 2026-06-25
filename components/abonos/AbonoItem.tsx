@@ -60,7 +60,7 @@ export function AbonoItem({ abono, showTitulo = false, onCancelar }: AbonoItemPr
             {boletos.map((b) => (
               <Link
                 key={b.id}
-                href={`/cobrancas/${b.id}`}
+                href={`/titulos/${b.id}`}
                 className="num rounded-sm border border-steel-200 bg-steel-50 px-2 py-0.5 font-mono
                   text-xs font-medium text-steel-600 transition-colors duration-100
                   hover:border-steel-300 hover:text-ink focus-ring"

@@ -46,8 +46,8 @@ export default function NovaReguaCliente({ params }: { params: Promise<{ id: str
         title="Cliente não encontrado"
         description="O registro pode ter sido removido do Certtus."
         action={
-          <Link href="/clientes">
-            <Button variant="secondary">Voltar para clientes</Button>
+          <Link href="/titulos">
+            <Button variant="secondary">Voltar para títulos</Button>
           </Link>
         }
       />
@@ -102,7 +102,7 @@ export default function NovaReguaCliente({ params }: { params: Promise<{ id: str
       <PageHeader
         eyebrow="Régua específica do cliente"
         title="Nova régua"
-        description={`A régua nasce de uma base e passa a valer só para ${cliente.nome}. Ajuste os marcos depois de criar, no detalhe do cliente.`}
+        description={`A régua nasce de uma base e passa a valer só para ${cliente.nome}. Depois de criar, ajuste os marcos pelo botão "Editar régua" no detalhe do cliente.`}
       />
 
       <Card className="mt-5 max-w-2xl">

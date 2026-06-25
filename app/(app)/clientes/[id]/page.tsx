@@ -10,19 +10,14 @@ import {
   formatarMoeda,
   formatarData,
   reguas,
-  templates,
-  ancoraParaDias,
   statusEfetivo,
   situacaoEfetiva,
   ORDEM_SEVERIDADE,
   type Boleto,
   type Comunicacao,
   type EstadoProcesso,
-  type ReguaCobranca,
-  type Template,
 } from '../../../../mocks'
 import { useReguas } from '../../../../hooks/useReguas'
-import { lerReguas, salvarReguas } from '../../../../lib/reguasStore'
 import { useNegativacoes } from '../../../../hooks/useNegativacoes'
 import { getSession, podeAcessar } from '../../../../lib/auth'
 import { processarAbonoDaComunicacao } from '../../../../lib/abonos'
@@ -46,12 +41,10 @@ import { Money } from '../../../../components/ui/Money'
 import { Tag } from '../../../../components/ui/Tag'
 import { Select } from '../../../../components/ui/Select'
 import { Field } from '../../../../components/ui/Field'
-import { ReguaEtapasEditor } from '../../../../components/notificacoes/ReguaEtapasEditor'
-import { type EtapaFormValues } from '../../../../components/notificacoes/NovaEtapaModal'
 import { DataTable, type Column } from '../../../../components/ui/DataTable'
 import { EmptyState } from '../../../../components/ui/EmptyState'
 import { useToast } from '../../../../hooks/useToast'
-import { IconChevronLeft, IconPause, IconPlay, IconBan, IconPlus, IconDownload } from '../../../../components/icons'
+import { IconChevronLeft, IconPause, IconPlay, IconBan, IconPlus, IconDownload, IconEdit } from '../../../../components/icons'
 import { ReguaTimeline } from './_components/ReguaTimeline'
 import { ComunicacaoItem } from '../../../../components/comunicacoes/ComunicacaoItem'
 import { ComunicacaoForm, type ComunicacaoFormValues } from './_components/ComunicacaoForm'
@@ -99,9 +92,6 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
   )
   const [reguaPendente, setReguaPendente] = useState(reguaId)
 
-  // templates locais — permitem criar template direto do modal de marco
-  const [listaTemplates, setListaTemplates] = useState<Template[]>(templates)
-
   const [comunicacoes, setComunicacoes] = useState<Comunicacao[]>(() => getComunicacoesDoCliente(id))
   const [formAberto, setFormAberto] = useState(false)
   const [editando, setEditando] = useState<Comunicacao | null>(null)
@@ -123,8 +113,8 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
         title="Cliente não encontrado"
         description="O registro pode ter sido removido do Certtus."
         action={
-          <Link href="/clientes">
-            <Button variant="secondary">Voltar para clientes</Button>
+          <Link href="/titulos">
+            <Button variant="secondary">Voltar para títulos</Button>
           </Link>
         }
       />
@@ -185,72 +175,8 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
     toast('Régua do cliente atualizada.')
   }
 
-  // edição da régua específica — altera apenas a régua deste cliente, agora
-  // persistida no store (sobrevive à navegação e ao reload)
-  function atualizarReguaCliente(transform: (r: ReguaCobranca) => ReguaCobranca) {
-    salvarReguas(lerReguas().map((r) => (r.id === reguaId ? transform(r) : r)))
-  }
-
-  function alternarEtapaCliente(etapaId: string, ativo: boolean) {
-    atualizarReguaCliente((r) => ({
-      ...r,
-      etapas: r.etapas.map((e) => (e.id === etapaId ? { ...e, ativo } : e)),
-    }))
-    toast(ativo ? 'Marco ativado.' : 'Marco desativado.')
-  }
-
-  function trocarTemplateEtapaCliente(etapaId: string, templateId: string) {
-    atualizarReguaCliente((r) => ({
-      ...r,
-      etapas: r.etapas.map((e) => (e.id === etapaId ? { ...e, templateId } : e)),
-    }))
-    toast('Template do marco atualizado.')
-  }
-
-  function adicionarEtapaCliente({ ancora, label, templateId, tipo }: EtapaFormValues) {
-    const nova = {
-      id: 'e-' + Date.now().toString(36),
-      ancora,
-      label,
-      templateId,
-      tipo,
-      ativo: true,
-      descricao:
-        tipo === 'handoff' ? 'Aviso ao financeiro: tratamento manual do marco.' : 'Marco adicionado manualmente.',
-    }
-    atualizarReguaCliente((r) => ({
-      ...r,
-      etapas: [...r.etapas, nova].sort((a, b) => ancoraParaDias(a.ancora) - ancoraParaDias(b.ancora)),
-    }))
-    toast(`Marco ${ancora} adicionado à régua do cliente.`)
-  }
-
-  function editarEtapaCliente(etapaId: string, { ancora, label, templateId, tipo }: EtapaFormValues) {
-    atualizarReguaCliente((r) => ({
-      ...r,
-      etapas: r.etapas
-        .map((e) => (e.id === etapaId ? { ...e, ancora, label, templateId, tipo } : e))
-        .sort((a, b) => ancoraParaDias(a.ancora) - ancoraParaDias(b.ancora)),
-    }))
-    toast('Marco atualizado.')
-  }
-
-  function removerEtapaCliente(etapaId: string) {
-    atualizarReguaCliente((r) => ({
-      ...r,
-      etapas: r.etapas.filter((e) => e.id !== etapaId),
-    }))
-    toast('Marco excluído da régua do cliente.')
-  }
-
-  // cria um template e o devolve já com id — usado pelo atalho dentro do modal
-  // de marco (templates do detalhe são locais ao protótipo)
-  function criarTemplateInlineCliente(values: { nome: string; corpo: string }): Template {
-    const novo: Template = { id: 't-' + Date.now().toString(36), ...values }
-    setListaTemplates((prev) => [...prev, novo])
-    toast('Template criado. Aguarda aprovação do canal.')
-    return novo
-  }
+  // a edição dos marcos da régua específica vive em tela dedicada
+  // (/clientes/[id]/regua/editar) — nunca no detalhe do cliente
 
   function salvarComunicacao(values: ComunicacaoFormValues) {
     const promessa = values.promessaData
@@ -352,11 +278,11 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
   return (
     <>
       <Link
-        href="/clientes"
+        href="/titulos"
         className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-link hover:underline focus-ring rounded-sm"
       >
         <IconChevronLeft size={15} />
-        Clientes
+        Títulos
       </Link>
 
       {/* cabeçalho da entidade */}
@@ -469,28 +395,19 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
               </span>
             </div>
           )}
-        </Card>
-      )}
-
-      {/* edição da régua específica — etapas, templates e novos marcos, só deste cliente */}
-      {tab === 'regua' && reguaEspecifica && (
-        <Card className="mt-5">
-          <Card.Header>
-            <Card.Title>Marcos da régua</Card.Title>
-            <span className="label-mono text-ink-muted">Só este cliente</span>
-          </Card.Header>
-          <ReguaEtapasEditor
-            etapas={regua.etapas}
-            templates={listaTemplates}
-            editable={podeOperarRegua}
-            reguaNome={regua.nome}
-            onToggle={alternarEtapaCliente}
-            onChangeTemplate={trocarTemplateEtapaCliente}
-            onAddEtapa={adicionarEtapaCliente}
-            onEditEtapa={editarEtapaCliente}
-            onRemoveEtapa={removerEtapaCliente}
-            onCreateTemplate={podeOperarRegua ? criarTemplateInlineCliente : undefined}
-          />
+          {/* régua específica: edição dos marcos em tela dedicada */}
+          {reguaEspecifica && podeOperarRegua && (
+            <div className="border-t border-line bg-neutral-50 px-5 py-3">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => router.push(`/clientes/${id}/regua/editar?regua=${regua.id}`)}
+              >
+                <IconEdit size={14} />
+                Editar régua
+              </Button>
+            </div>
+          )}
         </Card>
       )}
 
@@ -500,7 +417,7 @@ export default function ClienteDetalhe({ params }: { params: Promise<{ id: strin
             columns={colunasBoletos}
             rows={boletosCliente}
             rowKey={(b) => b.id}
-            onRowClick={(b) => router.push(`/cobrancas/${b.id}`)}
+            onRowClick={(b) => router.push(`/titulos/${b.id}`)}
             empty={<EmptyState title="Nenhum boleto" description="Este cliente não possui títulos no Certtus." />}
           />
         </div>

@@ -1,18 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import { PARAMETROS_ENCARGOS } from '../../../lib/parametros'
-import { PageHeader } from '../../../components/ui/PageHeader'
-import { Card } from '../../../components/ui/Card'
-import { Button } from '../../../components/ui/Button'
-import { Alert } from '../../../components/ui/Alert'
-import { Tag } from '../../../components/ui/Tag'
-import { Switch } from '../../../components/ui/Switch'
-import { SyncStatus } from '../../../components/ui/SyncStatus'
-import { DataTable, type Column } from '../../../components/ui/DataTable'
-import { useToast } from '../../../hooks/useToast'
-import { IconRefreshCw, IconDatabase, IconPercent, IconEdit, IconCheck, IconX } from '../../../components/icons'
-import { Input } from '../../../components/ui/Input'
+import { PARAMETROS_ENCARGOS } from '../../../../lib/parametros'
+import { PageHeader } from '../../../../components/ui/PageHeader'
+import { Card } from '../../../../components/ui/Card'
+import { Button } from '../../../../components/ui/Button'
+import { Alert } from '../../../../components/ui/Alert'
+import { Tag } from '../../../../components/ui/Tag'
+import { Switch } from '../../../../components/ui/Switch'
+import { SyncStatus } from '../../../../components/ui/SyncStatus'
+import { DataTable, type Column } from '../../../../components/ui/DataTable'
+import { useToast } from '../../../../hooks/useToast'
+import { IconRefreshCw, IconDatabase, IconPercent, IconEdit, IconCheck, IconX } from '../../../../components/icons'
+import { Input } from '../../../../components/ui/Input'
 
 type LogTipo = 'info' | 'warning' | 'error'
 
@@ -107,9 +107,9 @@ export default function Configuracoes() {
   return (
     <>
       <PageHeader
-        eyebrow="Administração"
-        title="Configurações"
-        description="Integração com o ERP Certtus — fonte dos fatos financeiros, acesso estritamente de leitura."
+        eyebrow="Admin"
+        title="Parametrizações"
+        description="Parâmetros de encargos e integração com o ERP Certtus — fonte dos fatos financeiros, acesso estritamente de leitura."
       />
 
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">

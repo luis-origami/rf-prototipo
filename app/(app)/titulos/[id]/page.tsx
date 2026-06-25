@@ -80,7 +80,7 @@ export default function TituloDetalhe({ params }: { params: Promise<{ id: string
         title="Título não encontrado"
         description="O registro pode ter sido removido do Certtus."
         action={
-          <Link href="/cobrancas">
+          <Link href="/titulos">
             <Button variant="secondary">Voltar para cobranças</Button>
           </Link>
         }
@@ -133,7 +133,7 @@ export default function TituloDetalhe({ params }: { params: Promise<{ id: string
   return (
     <>
       <Link
-        href="/cobrancas"
+        href="/titulos"
         className="mb-4 inline-flex items-center gap-1 rounded-sm text-sm font-medium text-link
           hover:underline focus-ring"
       >
