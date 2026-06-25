@@ -64,24 +64,24 @@ function ClienteDetalheContent({ id }: { id: string }) {
   const perfil = sessao?.perfil ?? 'comercial'
   const podeOperarRegua = podeAcessar(perfil, 'reguas')
   const podeComunicar = podeAcessar(perfil, 'comunicacaoManual')
-  // comercial vê apenas os dados principais do cliente — sem a aba de régua
-  const podeVerRegua = perfil !== 'comercial'
+  // comercial vê apenas os dados principais do cliente — só a aba Títulos
+  // (sem Régua nem Contatos)
+  const ehComercial = perfil === 'comercial'
 
   const { toast, toastHost } = useToast()
   const negativacoes = useNegativacoes()
   const negativado = isNegativado(id, negativacoes)
   const registroNeg = getNegativacao(id, negativacoes)
-  // aba inicial: respeita ?tab= (ex.: vindo de Títulos), senão Régua — ou Títulos
-  // para quem não enxerga a régua (comercial)
+  // aba inicial: comercial só tem Títulos; demais respeitam ?tab= (ex.: vindo de
+  // Títulos), senão abrem na Régua
   const tabParam = searchParams.get('tab')
-  const tabInicial: TabId =
-    tabParam === 'titulos'
+  const tabInicial: TabId = ehComercial
+    ? 'titulos'
+    : tabParam === 'titulos'
       ? 'titulos'
       : tabParam === 'comunicacoes'
         ? 'comunicacoes'
-        : podeVerRegua
-          ? 'regua'
-          : 'titulos'
+        : 'regua'
   const [tab, setTab] = useState<TabId>(tabInicial)
   const [estadoProcesso, setEstadoProcesso] = useState<EstadoProcesso>(cliente?.estadoProcesso ?? 'normal')
   const [modalNegativar, setModalNegativar] = useState(false)
@@ -281,9 +281,9 @@ function ClienteDetalheContent({ id }: { id: string }) {
   ]
 
   const tabs: TabItem<TabId>[] = [
-    ...(podeVerRegua ? [{ id: 'regua' as TabId, label: 'Régua de cobrança' }] : []),
+    ...(ehComercial ? [] : [{ id: 'regua' as TabId, label: 'Régua de cobrança' }]),
     { id: 'titulos', label: 'Títulos', count: boletosCliente.length },
-    { id: 'comunicacoes', label: 'Contatos', count: comunicacoes.length },
+    ...(ehComercial ? [] : [{ id: 'comunicacoes' as TabId, label: 'Contatos', count: comunicacoes.length }]),
   ]
 
   const comunicacoesOrdenadas = [...comunicacoes].sort((a, b) => b.dataHora.localeCompare(a.dataHora))
@@ -367,7 +367,7 @@ function ClienteDetalheContent({ id }: { id: string }) {
         <Tabs items={tabs} value={tab} onChange={setTab} />
       </div>
 
-      {podeVerRegua && tab === 'regua' && (
+      {!ehComercial && tab === 'regua' && (
         <Card className="mt-5">
           <Card.Header>
             <span className="flex flex-wrap items-center gap-2">
@@ -435,7 +435,7 @@ function ClienteDetalheContent({ id }: { id: string }) {
         </div>
       )}
 
-      {tab === 'comunicacoes' && (
+      {!ehComercial && tab === 'comunicacoes' && (
         <div className="mt-5 flex flex-col gap-3">
           {podeComunicar && !formAberto && (
             <div>
