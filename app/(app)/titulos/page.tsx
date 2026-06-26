@@ -589,19 +589,6 @@ function CobrancasContent() {
           </div>
         </div>
 
-        {/* atalho para etapas do Kanban — abaixo do seletor de visão */}
-        {visao === 'kanban' && podeOperarRegua && (
-          <div className="flex justify-end">
-            <Link
-              href="/titulos/etapas"
-              className="inline-flex items-center gap-1.5 rounded-sm text-sm font-medium text-link hover:underline focus-ring"
-            >
-              <IconSettings size={14} />
-              Gerenciar etapas
-            </Link>
-          </div>
-        )}
-
         {/* linha 2 — filtros em ordem: empresa, status, tipo, abono, negociação,
             [régua, só no Kanban] e o intervalo de vencimento por último */}
         <div className="flex flex-wrap items-center gap-2">
@@ -680,6 +667,17 @@ function CobrancasContent() {
               Limpar datas
             </Button>
           </div>
+
+          {/* atalho para etapas do Kanban — à direita, na linha dos filtros */}
+          {visao === 'kanban' && podeOperarRegua && (
+            <Link
+              href="/titulos/etapas"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-sm text-sm font-medium text-link hover:underline focus-ring"
+            >
+              <IconSettings size={14} />
+              Gerenciar etapas
+            </Link>
+          )}
         </div>
       </div>
 
