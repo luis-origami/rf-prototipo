@@ -586,19 +586,21 @@ function CobrancasContent() {
                 })}
               </div>
             )}
-
-            {/* atalho para a tela dedicada de etapas do Kanban */}
-            {visao === 'kanban' && podeOperarRegua && (
-              <Link
-                href="/titulos/etapas"
-                className="inline-flex items-center gap-1.5 rounded-sm text-sm font-medium text-link hover:underline focus-ring"
-              >
-                <IconSettings size={14} />
-                Gerenciar etapas
-              </Link>
-            )}
           </div>
         </div>
+
+        {/* atalho para etapas do Kanban — abaixo do seletor de visão */}
+        {visao === 'kanban' && podeOperarRegua && (
+          <div className="flex justify-end">
+            <Link
+              href="/titulos/etapas"
+              className="inline-flex items-center gap-1.5 rounded-sm text-sm font-medium text-link hover:underline focus-ring"
+            >
+              <IconSettings size={14} />
+              Gerenciar etapas
+            </Link>
+          </div>
+        )}
 
         {/* linha 2 — filtros em ordem: empresa, status, tipo, abono, negociação,
             [régua, só no Kanban] e o intervalo de vencimento por último */}
