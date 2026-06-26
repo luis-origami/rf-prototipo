@@ -47,7 +47,7 @@ import { EmptyState } from '../../../components/ui/EmptyState'
 import { Field } from '../../../components/ui/Field'
 import { Textarea } from '../../../components/ui/Textarea'
 import { useToast } from '../../../hooks/useToast'
-import { IconKanban, IconTable, IconUsers2 } from '../../../components/icons'
+import { IconKanban, IconTable, IconUsers2, IconSettings } from '../../../components/icons'
 import { KanbanBoard } from './_components/KanbanBoard'
 import {
   ComunicacaoForm,
@@ -146,6 +146,7 @@ function CobrancasContent() {
   const sessao = getSession()
   const perfil = sessao?.perfil ?? 'comercial'
   const podeComunicar = podeAcessar(perfil, 'comunicacaoManual')
+  const podeOperarRegua = podeAcessar(perfil, 'reguas')
   // comercial só enxerga o agrupamento por cliente — sem Tabela/Kanban
   const soAgrupado = perfil === 'comercial'
 
@@ -584,6 +585,17 @@ function CobrancasContent() {
                   )
                 })}
               </div>
+            )}
+
+            {/* atalho para a tela dedicada de etapas do Kanban */}
+            {visao === 'kanban' && podeOperarRegua && (
+              <Link
+                href="/titulos/etapas"
+                className="inline-flex items-center gap-1.5 rounded-sm text-sm font-medium text-link hover:underline focus-ring"
+              >
+                <IconSettings size={14} />
+                Gerenciar etapas
+              </Link>
             )}
           </div>
         </div>
