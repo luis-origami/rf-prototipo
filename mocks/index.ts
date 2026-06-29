@@ -1027,6 +1027,33 @@ export function getMetricaMes(empresa: EmpresaFiltro, mes: string): MetricaMes |
   return getMetricasMensais(empresa).find(m => m.mes === mes)
 }
 
+// percentual no padrão pt-BR (vírgula), 1 casa, sem zero à direita
+export function formatarPct(v: number, casas = 1): string {
+  return `${v.toLocaleString('pt-BR', { maximumFractionDigits: casas })}%`
+}
+
+export interface TaxasCarteiraSerie {
+  inadimplencia: number[]  // 12 meses; termina no valor de hoje
+  atraso: number[]
+  carteira: number[]       // total a receber no fim do mês (R$) — tendência
+}
+
+// Série de tendência das taxas da carteira para o card principal. Reescala a
+// evolução mensal real (pctFoto) para terminar no valor de HOJE — dá uma curva
+// coerente sem inventar uma série nova, e respeita o filtro de empresa.
+export function getTaxasCarteiraSerie(empresa: EmpresaFiltro = 'grupo'): TaxasCarteiraSerie {
+  const serie = getMetricasMensais(empresa)
+  const foto = serie.map(m => m.pctFoto)
+  const ultimaFoto = foto[foto.length - 1] || 1
+  const k = computarKpis(empresa)
+  const escala = (alvo: number) => foto.map(v => arred1((v / ultimaFoto) * alvo))
+  return {
+    inadimplencia: escala(k.pctInadimplenciaValor),
+    atraso: escala(k.pctAtrasoValor),
+    carteira: serie.map(m => m.carteiraFimMes),
+  }
+}
+
 // ── Forma de pagamento ────────────────────────────────────────────────────
 // Dado de origem Certtus (read-only). Atribuição determinística pelo nº do
 // título — o mesmo título tem sempre a mesma forma em todas as telas.

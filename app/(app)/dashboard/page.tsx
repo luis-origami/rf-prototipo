@@ -8,9 +8,11 @@ import {
   getEvolucaoInadimplencia,
   getPrevistoRecebido,
   getMetricasMensais,
+  getTaxasCarteiraSerie,
   ULTIMO_MES_FECHADO,
   rotuloMesLongo,
   formatarMoeda,
+  formatarPct,
   formatarData,
   DATA_BASE,
   type EmpresaFiltro,
@@ -48,10 +50,23 @@ export default function Dashboard() {
   const evolucao = useMemo(() => getEvolucaoInadimplencia(empresa), [empresa])
   const previstoRecebido = useMemo(() => getPrevistoRecebido(empresa), [empresa])
   const metricasMensais = useMemo(() => getMetricasMensais(empresa), [empresa])
+  const taxasSerie = useMemo(() => getTaxasCarteiraSerie(empresa), [empresa])
   const mes = useMemo(
     () => metricasMensais.find((m) => m.mes === mesRef) ?? metricasMensais[metricasMensais.length - 1],
     [metricasMensais, mesRef],
   )
+  // série até o mês selecionado (inclusive) — últimos 6 pontos p/ as sparklines
+  // dos KPIs do mês; o delta é o mês selecionado vs. o anterior
+  const trilha = useMemo(() => {
+    const i = metricasMensais.findIndex((m) => m.mes === mes.mes)
+    const ate = metricasMensais.slice(0, i + 1).slice(-6)
+    return {
+      recebidoNoVencimento: ate.map((m) => m.pctRecebidoNoVencimento),
+      recebidoMes: ate.map((m) => m.pctRecebidoMes),
+      desempenho: ate.map((m) => m.pctDesempenho),
+      diasMedios: ate.map((m) => m.diasMediosAtraso),
+    }
+  }, [metricasMensais, mes])
 
   function alternarFaixa(faixaId: string) {
     setFaixasAtivas((prev) => {
@@ -118,31 +133,41 @@ export default function Dashboard() {
         }
       />
 
-      {/* Taxas da carteira — foto de hoje, sobre o total a receber. A taxa de
-          inadimplência é a north star: keyline laranja. */}
+      {/* Taxas da carteira — foto de hoje, sobre o total a receber. Bloco
+          principal sobre fundo aço; inadimplência é a north star (keyline). A
+          variação (▲/▼) lê a tendência: subir inadimplência/atraso = piora. */}
       <section className="mt-2">
-        <div className="mb-3 flex items-baseline justify-between">
-          <h2 className="font-display text-base font-semibold text-ink">Carteira hoje</h2>
-          <span className="label-mono text-ink-muted">
-            sobre {formatarMoeda(kpis.totalAReceber)} a receber · {formatarData(DATA_BASE)}
-          </span>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div
+          className="grid grid-cols-1 gap-px overflow-hidden rounded-xl bg-steel-700
+            shadow-sm sm:grid-cols-3"
+        >
           <KpiCard
-            label="Taxa de inadimplência"
-            value={`${kpis.pctInadimplenciaValor}%`}
-            meta={`${formatarMoeda(kpis.valorInadimplente)} vencido há mais de 15 dias`}
+            variant="dark"
             highlight
+            label="Taxa de inadimplência"
+            value={formatarPct(kpis.pctInadimplenciaValor)}
+            meta={`${formatarMoeda(kpis.valorInadimplente)} vencido há mais de 15 dias`}
+            trend={{ series: taxasSerie.inadimplencia, higherIsBetter: false, unit: 'pp' }}
           />
           <KpiCard
+            variant="dark"
             label="Taxa em atraso"
-            value={`${kpis.pctAtrasoValor}%`}
-            meta={`${formatarMoeda(kpis.valorEmAtraso)} vencido · inclui ${kpis.pctInadimplenciaValor}% inadimplente`}
+            value={formatarPct(kpis.pctAtrasoValor)}
+            meta={`${formatarMoeda(kpis.valorEmAtraso)} vencido · inclui ${formatarPct(kpis.pctInadimplenciaValor)} inadimplente`}
+            trend={{ series: taxasSerie.atraso, higherIsBetter: false, unit: 'pp' }}
+          />
+          <KpiCard
+            variant="dark"
+            label="Total a receber"
+            value={formatarMoeda(kpis.totalAReceber)}
+            meta={`posição em ${formatarData(DATA_BASE)} · carteira em aberto`}
+            sparkline={taxasSerie.carteira}
           />
         </div>
       </section>
 
-      {/* Resultado do mês — KPIs por mês de vencimento, recortados pelo seletor */}
+      {/* Resultado do mês — KPIs por mês de vencimento, recortados pelo seletor.
+          Sparkline = últimos 6 meses; ▲/▼ = mês selecionado vs. o anterior. */}
       <section className="mt-6">
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-display text-base font-semibold text-ink">
@@ -153,24 +178,28 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard
             label="Recebido na data correta"
-            value={`${mes.pctRecebidoNoVencimento}%`}
+            value={formatarPct(mes.pctRecebidoNoVencimento)}
             meta={`${formatarMoeda(mes.recebidoNoVencimento)} pago até o vencimento`}
+            trend={{ series: trilha.recebidoNoVencimento, higherIsBetter: true, unit: 'pp' }}
           />
           <KpiCard
             label="Recebido do mês"
-            value={`${mes.pctRecebidoMes}%`}
+            value={formatarPct(mes.pctRecebidoMes)}
             meta={`${formatarMoeda(mes.recebido)} de ${formatarMoeda(mes.previsto)} previsto`}
+            trend={{ series: trilha.recebidoMes, higherIsBetter: true, unit: 'pp' }}
           />
           <KpiCard
             label="Desempenho do mês"
-            value={`${mes.pctDesempenho}%`}
+            value={formatarPct(mes.pctDesempenho)}
             meta={`${formatarMoeda(mes.inadimplenteAposCorte)} sem pagar após 15 dias`}
             valueClassName="text-inadimplente-fg"
+            trend={{ series: trilha.desempenho, higherIsBetter: false, unit: 'pp' }}
           />
           <KpiCard
             label="Dias médios de atraso"
             value={`${mes.diasMediosAtraso} dias`}
             meta="média dos títulos pagos com atraso"
+            trend={{ series: trilha.diasMedios, higherIsBetter: false, unit: 'dias' }}
           />
         </div>
       </section>
