@@ -238,12 +238,12 @@ export default function Dashboard() {
           </Card.Body>
         </Card>
 
-        {/* inadimplência mês a mês — foto da carteira (estoque) × desempenho do
-            mês (por vencimento): a evolução geral e o efeito da cobrança */}
+        {/* inadimplência mês a mês — barras pareadas: inadimplência da carteira
+            (acumulada) × inadimplência do mês (por vencimento) */}
         <Card>
           <Card.Header>
             <Card.Title>Inadimplência mês a mês</Card.Title>
-            <span className="label-mono text-ink-muted">% — foto × desempenho</span>
+            <span className="label-mono text-ink-muted">% — carteira × do mês</span>
           </Card.Header>
           <Card.Body>
             <InadimplenciaMensalChart dados={metricasMensais} />

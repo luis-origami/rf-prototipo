@@ -1,16 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { formatarMoeda, type MetricaMes } from '../../../../mocks'
+import { formatarMoeda, formatarPct, type MetricaMes } from '../../../../mocks'
 import { useTooltipClamp } from './useTooltipClamp'
 import { PeriodoFiltro, type Periodo } from './PeriodoFiltro'
 
-/* Inadimplência mês a mês — duas leituras (metric 3):
-   • Foto do mês: % da carteira inadimplente no último dia de cada mês —
-     acompanha a evolução geral do estoque.
-   • Desempenho do mês: dos títulos que venciam no mês, % que seguiu sem
-     pagamento após o corte de 15 dias — mede se a cobrança daquele mês
-     funcionou. Linhas, não barras: o que importa é a tendência. */
+/* Inadimplência mês a mês — duas leituras, em barras pareadas por mês:
+   • Inadimplência da carteira: % da carteira inadimplente no fim de cada mês
+     (acumulado) — a evolução geral.
+   • Inadimplência do mês: dos títulos que venciam no mês, % que seguiu sem
+     pagar após o corte de 15 dias — o efeito da cobrança daquele mês. */
 
 const MES_ABREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 
@@ -19,10 +18,6 @@ function rotuloMes(mes: string): string {
   return `${MES_ABREV[Number(m) - 1]}/${ano.slice(2)}`
 }
 
-// área de desenho do SVG (coordenadas internas; traço não escala)
-const W = 100
-const H = 42
-
 interface InadimplenciaMensalChartProps {
   dados: MetricaMes[]
 }
@@ -30,15 +25,11 @@ interface InadimplenciaMensalChartProps {
 export function InadimplenciaMensalChart({ dados: dadosFull }: InadimplenciaMensalChartProps) {
   const [ativo, setAtivo] = useState<number | null>(null)
   const [periodo, setPeriodo] = useState<Periodo>(12)
+  // recorta a janela visível às últimas N posições da série
   const dados = dadosFull.slice(-periodo)
 
   const maxPct = Math.max(...dados.flatMap((d) => [d.pctFoto, d.pctDesempenho]), 1)
   const yMax = Math.ceil(maxPct / 5) * 5 || 5
-
-  const x = (i: number) => (dados.length === 1 ? W / 2 : (i / (dados.length - 1)) * W)
-  const y = (v: number) => H - (v / yMax) * H
-  const pontos = (sel: (d: MetricaMes) => number) =>
-    dados.map((d, i) => `${x(i)},${y(sel(d))}`).join(' ')
 
   const sel = ativo != null ? dados[ativo] : null
   const { wrapRef, tipRef, left } = useTooltipClamp(
@@ -63,87 +54,46 @@ export function InadimplenciaMensalChart({ dados: dadosFull }: InadimplenciaMens
           >
             <div className="label-mono text-steel-200">{rotuloMes(sel.mes)}</div>
             <div className="num font-mono text-sm">
-              <span className="text-inadimplente-fg">●</span> Foto da carteira{' '}
-              <span className="font-semibold">{sel.pctFoto}%</span>
+              <span className="text-inadimplente-base">●</span> Carteira{' '}
+              <span className="font-semibold">{formatarPct(sel.pctFoto)}</span>
             </div>
             <div className="num font-mono text-sm">
-              <span className="text-accent">●</span> Desempenho do mês{' '}
-              <span className="font-semibold">{sel.pctDesempenho}%</span>
+              <span className="text-atrasado-base">●</span> Do mês{' '}
+              <span className="font-semibold">{formatarPct(sel.pctDesempenho)}</span>
               <span className="ml-2 text-steel-200">{formatarMoeda(sel.inadimplenteAposCorte)}</span>
             </div>
           </div>
         )}
 
-        {/* linhas — SVG com traço de largura fixa (vector-effect) */}
-        <div className="relative h-44">
-          <svg
-            viewBox={`0 0 ${W} ${H}`}
-            preserveAspectRatio="none"
-            className="h-full w-full overflow-visible"
-            role="img"
-            aria-label="Evolução mensal da inadimplência: foto da carteira e desempenho do mês"
-          >
-            {/* foto da carteira (estoque) */}
-            <polyline
-              points={pontos((d) => d.pctFoto)}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              vectorEffect="non-scaling-stroke"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              className="text-inadimplente-fg"
-            />
-            {/* desempenho do mês (por vencimento) */}
-            <polyline
-              points={pontos((d) => d.pctDesempenho)}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeDasharray="3 2"
-              vectorEffect="non-scaling-stroke"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              className="text-accent"
-            />
-          </svg>
-
-          {/* pontos do mês ativo — em HTML para ficarem redondos (o SVG é
-              esticado em X≠Y e deformaria <circle>) */}
-          {sel && (
-            <>
+        {/* pares de barras por mês */}
+        <div
+          className="flex h-44 items-end gap-1.5 sm:gap-2"
+          role="img"
+          aria-label="Inadimplência mensal: da carteira (acumulada) e do mês (por vencimento)"
+        >
+          {dados.map((d, i) => (
+            <div
+              key={d.mes}
+              aria-label={`${rotuloMes(d.mes)}: carteira ${formatarPct(d.pctFoto)}, do mês ${formatarPct(d.pctDesempenho)}`}
+              onMouseEnter={() => setAtivo(i)}
+              onMouseLeave={() => setAtivo(null)}
+              className={`flex h-full flex-1 items-end gap-px transition-opacity duration-100
+                ${ativo != null && ativo !== i ? 'opacity-40' : ''}`}
+            >
               <span
-                className="pointer-events-none absolute h-2 w-2 -translate-x-1/2 translate-y-1/2
-                  rounded-full bg-inadimplente-fg ring-2 ring-surface"
-                style={{ left: `${x(ativo!)}%`, bottom: `${(sel.pctFoto / yMax) * 100}%` }}
+                className="w-1/2 rounded-t-sm bg-inadimplente-base"
+                style={{ height: `${(d.pctFoto / yMax) * 100}%` }}
               />
               <span
-                className="pointer-events-none absolute h-2 w-2 -translate-x-1/2 translate-y-1/2
-                  rounded-full bg-accent ring-2 ring-surface"
-                style={{ left: `${x(ativo!)}%`, bottom: `${(sel.pctDesempenho / yMax) * 100}%` }}
+                className="w-1/2 rounded-t-sm bg-atrasado-base"
+                style={{ height: `${(d.pctDesempenho / yMax) * 100}%` }}
               />
-            </>
-          )}
-
-          {/* faixa de captura de hover por mês */}
-          <div className="absolute inset-0 flex">
-            {dados.map((d, i) => (
-              <button
-                key={d.mes}
-                type="button"
-                aria-label={`${rotuloMes(d.mes)}: foto da carteira ${d.pctFoto}%, desempenho do mês ${d.pctDesempenho}%`}
-                onMouseEnter={() => setAtivo(i)}
-                onMouseLeave={() => setAtivo(null)}
-                onFocus={() => setAtivo(i)}
-                onBlur={() => setAtivo(null)}
-                className="h-full flex-1 cursor-pointer outline-none focus-ring"
-              />
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
 
         {/* eixo — meses em mono 11px */}
-        <div className="mt-2 flex border-t border-line pt-2">
+        <div className="mt-2 flex gap-1.5 border-t border-line pt-2 sm:gap-2">
           {dados.map((d) => (
             <span key={d.mes} className="num flex-1 text-center font-mono text-xs text-ink-muted">
               {rotuloMes(d.mes)}
@@ -155,12 +105,12 @@ export function InadimplenciaMensalChart({ dados: dadosFull }: InadimplenciaMens
       {/* legenda */}
       <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
         <span className="label-mono flex items-center gap-2 text-ink-muted">
-          <span className="h-0.5 w-4 shrink-0 rounded-full bg-inadimplente-fg" />
-          Foto da carteira (estoque)
+          <span className="h-2.5 w-2.5 shrink-0 rounded-sm bg-inadimplente-base" />
+          Inadimplência da carteira
         </span>
         <span className="label-mono flex items-center gap-2 text-ink-muted">
-          <span className="h-0.5 w-4 shrink-0 rounded-full bg-accent" />
-          Desempenho do mês (por vencimento)
+          <span className="h-2.5 w-2.5 shrink-0 rounded-sm bg-atrasado-base" />
+          Inadimplência do mês
         </span>
       </div>
     </div>
