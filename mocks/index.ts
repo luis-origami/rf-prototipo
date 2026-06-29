@@ -553,16 +553,17 @@ export const comunicacoes: Comunicacao[] = [
 ]
 
 // ── Corte de inadimplência ────────────────────────────────────────────────
-// Proposta da Régua de Cobrança (DS v5, slide 04): atraso ≥ D+30 = inadimplente.
-// PENDENTE de confirmação com a RF — por isso o corte vive aqui, num lugar só.
-// Todas as telas derivam o status com statusEfetivo/situacaoEfetiva; o campo
-// `status` estático do mock nunca é exibido diretamente para boletos vencidos.
+// Régua de Cobrança (confirmado com a RF, jun/2026): título vencido há MAIS
+// DE 15 dias = inadimplente; entre 1 e 15 dias é apenas "em atraso". O corte
+// vive aqui, num lugar só, e vale para TODO o app. Todas as telas derivam o
+// status com statusEfetivo/situacaoEfetiva; o campo `status` estático do mock
+// nunca é exibido diretamente para boletos vencidos.
 
-export const CORTE_INADIMPLENCIA_DIAS = 30
+export const CORTE_INADIMPLENCIA_DIAS = 15
 
 export function statusEfetivo(b: Boleto): StatusBoleto {
   if (b.status === 'atrasado' || b.status === 'inadimplente') {
-    return (b.diasAtraso ?? 0) >= CORTE_INADIMPLENCIA_DIAS ? 'inadimplente' : 'atrasado'
+    return (b.diasAtraso ?? 0) > CORTE_INADIMPLENCIA_DIAS ? 'inadimplente' : 'atrasado'
   }
   return b.status
 }
@@ -711,16 +712,32 @@ export function computarKpis(empresa: EmpresaFiltro = 'grupo') {
   const vencidos = bs.filter(b => b.status === 'atrasado' || b.status === 'inadimplente')
   const inadimplentes = cs.filter(c => situacaoEfetiva(c) === 'inadimplente')
 
+  // base monetária das taxas: tudo que a RF tem a receber (carteira em aberto)
+  const totalAReceber = bs
+    .filter(b => b.status !== 'pago' && b.status !== 'pago_atraso')
+    .reduce((s, b) => s + b.valor, 0)
+
+  // vencido há mais de 15 dias (inadimplente) ⊆ qualquer vencido (em atraso)
+  const valorInadimplente = vencidos
+    .filter(b => statusEfetivo(b) === 'inadimplente')
+    .reduce((s, b) => s + b.valor, 0)
+  const valorEmAtraso = vencidos.reduce((s, b) => s + b.valor, 0)
+
   return {
-    totalEmAberto: bs
-      .filter(b => b.status !== 'pago' && b.status !== 'pago_atraso')
-      .reduce((s, b) => s + b.valor, 0),
+    totalEmAberto: totalAReceber,
+    totalAReceber,
 
     boletosEmAberto: bs.filter(b => b.status !== 'pago' && b.status !== 'pago_atraso').length,
 
-    totalInadimplente: vencidos
-      .filter(b => statusEfetivo(b) === 'inadimplente')
-      .reduce((s, b) => s + b.valor, 0),
+    // ── taxas monetárias (R$) — north star do painel ──
+    valorInadimplente,
+    valorEmAtraso,
+    // (1) inadimplência: vencido > 15d sobre o total a receber
+    pctInadimplenciaValor: totalAReceber === 0 ? 0 : arred1((valorInadimplente / totalAReceber) * 100),
+    // (2) em atraso: qualquer vencido (≥ 1 dia) sobre o total a receber
+    pctAtrasoValor: totalAReceber === 0 ? 0 : arred1((valorEmAtraso / totalAReceber) * 100),
+
+    totalInadimplente: valorInadimplente,
 
     clientesInadimplentes: inadimplentes.length,
 
@@ -902,6 +919,114 @@ export function getPrevistoRecebido(empresa: EmpresaFiltro = 'grupo'): PrevistoR
   }))
 }
 
+// ── Métricas mensais de cobrança ──────────────────────────────────────────
+// Série de 12 meses (jul/25 → jun/26) que alimenta os KPIs "do mês" do painel
+// e o gráfico de inadimplência mês a mês. Tudo derivado da mesma fonte das
+// demais telas: previsto/recebido vêm de HIST_PREVISTO_RECEBIDO, o estoque
+// inadimplente vem de getEvolucaoInadimplencia (faixas > 15 dias). As colunas
+// abaixo são os dados que não derivam dessas séries.
+
+// série completa de meses (11 históricos + mês corrente, parcial)
+export const MESES_SERIE = [...MESES_HIST, DATA_BASE.slice(0, 7)]
+// último mês fechado — referência padrão dos KPIs do mês (jun/26 é parcial)
+export const ULTIMO_MES_FECHADO = MESES_HIST[MESES_HIST.length - 1]
+
+const MES_LONGO = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+]
+
+// "2026-05" → "Maio/2026"
+export function rotuloMesLongo(mes: string): string {
+  const [ano, m] = mes.split('-')
+  return `${MES_LONGO[Number(m) - 1]}/${ano}`
+}
+
+// [recebidoNoVencimento, inadimplenteAposCorte, diasMediosAtraso, carteiraFimMes]
+// por mês (12), por empresa. recebidoNoVencimento ≤ recebido (subconjunto pago
+// até o dia do vencimento). inadimplenteAposCorte = R$ que venciam no mês e
+// seguiam sem pagar após o corte de 15 dias. carteiraFimMes = total a receber
+// em aberto no último dia do mês (denominador da "foto" de inadimplência).
+const HIST_METRICAS_MES: Record<EmpresaId, [number, number, number, number][]> = {
+  rf: [
+    [87_000, 12_000,  9, 290_000], [90_000, 16_000, 10, 300_000],
+    [97_000, 13_000,  9, 310_000], [91_000, 17_000, 11, 330_000],
+    [98_000, 20_000, 12, 350_000], [101_000, 25_000, 13, 380_000],
+    [86_000, 20_000, 11, 400_000], [89_000, 24_000, 13, 430_000],
+    [92_000, 28_000, 15, 450_000], [94_000, 30_000, 16, 470_000],
+    [88_000, 30_000, 18, 490_000], [83_000, 29_000, 12, 480_000],
+  ],
+  favarini: [
+    [25_500, 3_000,  7, 60_000], [26_500, 3_000,  8, 64_000],
+    [28_500, 4_500,  7, 68_000], [26_500, 5_000,  9, 72_000],
+    [29_000, 6_000,  8, 80_000], [30_500, 6_500, 10, 90_000],
+    [25_000, 6_000,  9, 95_000], [26_500, 6_500, 11, 110_000],
+    [27_000, 8_000, 12, 130_000], [28_500, 8_500, 13, 150_000],
+    [26_000, 8_500, 14, 170_000], [24_500, 8_500, 10, 165_000],
+  ],
+  refor: [
+    [12_500, 1_000, 4, 30_000], [13_000, 1_200, 5, 31_000],
+    [14_000, 1_500, 4, 30_000], [13_000, 1_500, 6, 32_000],
+    [14_000, 1_800, 5, 31_000], [14_500, 2_200, 6, 33_000],
+    [12_000, 2_000, 5, 32_000], [13_000, 2_300, 7, 34_000],
+    [13_500, 2_800, 6, 33_000], [14_000, 3_000, 7, 35_000],
+    [12_500, 3_000, 8, 34_000], [12_000, 3_000, 5, 33_000],
+  ],
+}
+
+export interface MetricaMes {
+  mes: string                      // YYYY-MM
+  previsto: number                 // faturado com vencimento no mês
+  recebido: number                 // entrou (em qualquer prazo)
+  recebidoNoVencimento: number     // pago até o dia do vencimento
+  inadimplenteAposCorte: number    // venceu no mês e seguiu sem pagar após 15d
+  diasMediosAtraso: number         // média dos pagos com atraso (em dias)
+  inadimplenteFimMes: number       // estoque inadimplente no fim do mês
+  carteiraFimMes: number           // total a receber em aberto no fim do mês
+  pctRecebidoMes: number           // (6) recebido / previsto
+  pctRecebidoNoVencimento: number  // (4) recebido na data correta / previsto
+  pctDesempenho: number            // (3b) inadimplente após corte / previsto
+  pctFoto: number                  // (3a) inadimplente / carteira no fim do mês
+}
+
+// Série mensal consolidada das métricas de cobrança, no filtro de empresa.
+export function getMetricasMensais(empresa: EmpresaFiltro = 'grupo'): MetricaMes[] {
+  const ids: EmpresaId[] = empresa === 'grupo' ? empresas.map(e => e.id) : [empresa]
+  const pr = getPrevistoRecebido(empresa)         // mesmo filtro, 12 meses
+  const evo = getEvolucaoInadimplencia(empresa)   // mesmo filtro, 12 meses
+
+  return MESES_SERIE.map((mes, i) => {
+    const { previsto, recebido } = pr[i]
+    const recebidoNoVencimento = ids.reduce((s, id) => s + HIST_METRICAS_MES[id][i][0], 0)
+    const inadimplenteAposCorte = ids.reduce((s, id) => s + HIST_METRICAS_MES[id][i][1], 0)
+    const carteiraFimMes = ids.reduce((s, id) => s + HIST_METRICAS_MES[id][i][3], 0)
+    // inadimplente = faixas > 15 dias (16–29 + 30+) — coerente com o corte
+    const inadimplenteFimMes = evo[i].faixas[2] + evo[i].faixas[3]
+    // dias médios do grupo: média ponderada pelo recebido de cada empresa
+    const diasNum = ids.reduce((s, id) => s + HIST_METRICAS_MES[id][i][2] * HIST_PREVISTO_RECEBIDO[id][i][1], 0)
+    const diasDen = ids.reduce((s, id) => s + HIST_PREVISTO_RECEBIDO[id][i][1], 0)
+
+    return {
+      mes,
+      previsto,
+      recebido,
+      recebidoNoVencimento,
+      inadimplenteAposCorte,
+      diasMediosAtraso: diasDen === 0 ? 0 : Math.round(diasNum / diasDen),
+      inadimplenteFimMes,
+      carteiraFimMes,
+      pctRecebidoMes: previsto === 0 ? 0 : arred1((recebido / previsto) * 100),
+      pctRecebidoNoVencimento: previsto === 0 ? 0 : arred1((recebidoNoVencimento / previsto) * 100),
+      pctDesempenho: previsto === 0 ? 0 : arred1((inadimplenteAposCorte / previsto) * 100),
+      pctFoto: carteiraFimMes === 0 ? 0 : arred1((inadimplenteFimMes / carteiraFimMes) * 100),
+    }
+  })
+}
+
+export function getMetricaMes(empresa: EmpresaFiltro, mes: string): MetricaMes | undefined {
+  return getMetricasMensais(empresa).find(m => m.mes === mes)
+}
+
 // ── Forma de pagamento ────────────────────────────────────────────────────
 // Dado de origem Certtus (read-only). Atribuição determinística pelo nº do
 // título — o mesmo título tem sempre a mesma forma em todas as telas.
@@ -948,6 +1073,11 @@ export interface Encargos {
 
 function arred2(v: number): number {
   return Math.round(v * 100) / 100
+}
+
+// uma casa decimal — precisão das taxas (%) sem ruído visual no painel
+function arred1(v: number): number {
+  return Math.round(v * 10) / 10
 }
 
 export function calcularEncargos(b: Boleto, dataBase: string = DATA_BASE): Encargos | null {

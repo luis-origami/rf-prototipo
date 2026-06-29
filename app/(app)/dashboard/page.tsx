@@ -7,6 +7,9 @@ import {
   boletosDaEmpresa,
   getEvolucaoInadimplencia,
   getPrevistoRecebido,
+  getMetricasMensais,
+  ULTIMO_MES_FECHADO,
+  rotuloMesLongo,
   formatarMoeda,
   formatarData,
   DATA_BASE,
@@ -19,11 +22,12 @@ import { Button } from '../../../components/ui/Button'
 import { useToast } from '../../../hooks/useToast'
 import { IconRefreshCw } from '../../../components/icons'
 import { AgingChart, type AgingFaixa } from './_components/AgingChart'
-import { EvolucaoInadimplenciaChart } from './_components/EvolucaoInadimplenciaChart'
+import { InadimplenciaMensalChart } from './_components/InadimplenciaMensalChart'
 import { InadimplenciaRecuperadoChart } from './_components/InadimplenciaRecuperadoChart'
 import { PrevistoRecebidoChart } from './_components/PrevistoRecebidoChart'
 import { RecebiveisCard, FAIXAS_RECEBIVEIS } from './_components/RecebiveisCard'
 import { EmpresaSelect } from './_components/EmpresaSelect'
+import { MesSelect } from './_components/MesSelect'
 import { RecebimentoTipoChart } from './_components/RecebimentoTipoChart'
 
 export default function Dashboard() {
@@ -32,6 +36,8 @@ export default function Dashboard() {
   const [syncing, setSyncing] = useState(false)
   // filtro de empresa do painel — dropdown no cabeçalho, refiltra KPIs e gráficos
   const [empresa, setEmpresa] = useState<EmpresaFiltro>('grupo')
+  // mês de referência dos KPIs "do mês" — padrão: último mês fechado
+  const [mesRef, setMesRef] = useState<string>(ULTIMO_MES_FECHADO)
   // faixas de tempo dos recebíveis — também recortam as formas de pagamento
   const [faixasAtivas, setFaixasAtivas] = useState<Set<string>>(
     () => new Set(FAIXAS_RECEBIVEIS.map((f) => f.id)),
@@ -41,6 +47,11 @@ export default function Dashboard() {
   const boletosEmpresa = useMemo(() => boletosDaEmpresa(empresa), [empresa])
   const evolucao = useMemo(() => getEvolucaoInadimplencia(empresa), [empresa])
   const previstoRecebido = useMemo(() => getPrevistoRecebido(empresa), [empresa])
+  const metricasMensais = useMemo(() => getMetricasMensais(empresa), [empresa])
+  const mes = useMemo(
+    () => metricasMensais.find((m) => m.mes === mesRef) ?? metricasMensais[metricasMensais.length - 1],
+    [metricasMensais, mesRef],
+  )
 
   function alternarFaixa(faixaId: string) {
     setFaixasAtivas((prev) => {
@@ -51,8 +62,8 @@ export default function Dashboard() {
     })
   }
 
-  /* faixas do aging — cores da régua de severidade; acima do corte de 30 dias
-     (CORTE_INADIMPLENCIA_DIAS) tudo é inadimplência, escurecendo com a idade
+  /* faixas do aging — cores da régua de severidade; passado o corte de 15 dias
+     (CORTE_INADIMPLENCIA_DIAS) o título é inadimplente, escurecendo com a idade
      da dívida até o quase-preto da perda provável (180+) */
   const agingFaixas: AgingFaixa[] = [
     { label: 'A vencer', valor: kpis.aging.avencer, cls: 'bg-avencer-base' },
@@ -107,31 +118,62 @@ export default function Dashboard() {
         }
       />
 
-      {/* KPIs — % de inadimplência é a north star: primeira posição + keyline laranja */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
-          label="% de inadimplência"
-          value={`${kpis.pctInadimplencia}%`}
-          meta={`${kpis.clientesInadimplentes} de ${kpis.totalClientes} clientes`}
-          highlight
-        />
-        <KpiCard
-          label="Inadimplente"
-          value={formatarMoeda(kpis.totalInadimplente)}
-          meta={`${kpis.clientesInadimplentes} clientes · ≥ 30 dias de atraso`}
-          valueClassName="text-inadimplente-fg"
-        />
-        <KpiCard
-          label="Total em aberto"
-          value={formatarMoeda(kpis.totalEmAberto)}
-          meta={`${kpis.boletosEmAberto} boletos`}
-        />
-        <KpiCard
-          label="Atraso médio"
-          value={`${kpis.diasMediosAtraso} dias`}
-          meta="boletos vencidos e não pagos"
-        />
-      </div>
+      {/* Taxas da carteira — foto de hoje, sobre o total a receber. A taxa de
+          inadimplência é a north star: keyline laranja. */}
+      <section className="mt-2">
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="font-display text-base font-semibold text-ink">Carteira hoje</h2>
+          <span className="label-mono text-ink-muted">
+            sobre {formatarMoeda(kpis.totalAReceber)} a receber · {formatarData(DATA_BASE)}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <KpiCard
+            label="Taxa de inadimplência"
+            value={`${kpis.pctInadimplenciaValor}%`}
+            meta={`${formatarMoeda(kpis.valorInadimplente)} vencido há mais de 15 dias`}
+            highlight
+          />
+          <KpiCard
+            label="Taxa em atraso"
+            value={`${kpis.pctAtrasoValor}%`}
+            meta={`${formatarMoeda(kpis.valorEmAtraso)} vencido · inclui ${kpis.pctInadimplenciaValor}% inadimplente`}
+          />
+        </div>
+      </section>
+
+      {/* Resultado do mês — KPIs por mês de vencimento, recortados pelo seletor */}
+      <section className="mt-6">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-display text-base font-semibold text-ink">
+            Resultado de {rotuloMesLongo(mes.mes)}
+          </h2>
+          <MesSelect value={mesRef} onChange={setMesRef} />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <KpiCard
+            label="Recebido na data correta"
+            value={`${mes.pctRecebidoNoVencimento}%`}
+            meta={`${formatarMoeda(mes.recebidoNoVencimento)} pago até o vencimento`}
+          />
+          <KpiCard
+            label="Recebido do mês"
+            value={`${mes.pctRecebidoMes}%`}
+            meta={`${formatarMoeda(mes.recebido)} de ${formatarMoeda(mes.previsto)} previsto`}
+          />
+          <KpiCard
+            label="Desempenho do mês"
+            value={`${mes.pctDesempenho}%`}
+            meta={`${formatarMoeda(mes.inadimplenteAposCorte)} sem pagar após 15 dias`}
+            valueClassName="text-inadimplente-fg"
+          />
+          <KpiCard
+            label="Dias médios de atraso"
+            value={`${mes.diasMediosAtraso} dias`}
+            meta="média dos títulos pagos com atraso"
+          />
+        </div>
+      </section>
 
       {/* o que entra (recebíveis, faixas habilitáveis) e como entra (formas, mesmo recorte) */}
       <div className="mt-6">
@@ -166,14 +208,15 @@ export default function Dashboard() {
           </Card.Body>
         </Card>
 
-        {/* evolução da inadimplência — a carteira está envelhecendo ou sendo recuperada cedo? */}
+        {/* inadimplência mês a mês — foto da carteira (estoque) × desempenho do
+            mês (por vencimento): a evolução geral e o efeito da cobrança */}
         <Card>
           <Card.Header>
-            <Card.Title>Evolução da inadimplência</Card.Title>
-            <span className="label-mono text-ink-muted">por faixa de aging</span>
+            <Card.Title>Inadimplência mês a mês</Card.Title>
+            <span className="label-mono text-ink-muted">% — foto × desempenho</span>
           </Card.Header>
           <Card.Body>
-            <EvolucaoInadimplenciaChart dados={evolucao} />
+            <InadimplenciaMensalChart dados={metricasMensais} />
           </Card.Body>
         </Card>
 
