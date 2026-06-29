@@ -134,15 +134,16 @@ export default function Dashboard() {
       />
 
       {/* Taxas da carteira — foto de hoje, sobre o total a receber. Bloco
-          principal sobre fundo aço; inadimplência é a north star (keyline). A
-          variação (▲/▼) lê a tendência: subir inadimplência/atraso = piora. */}
+          principal agrupado, com leve tom aço para destacar dos cards do mês
+          (sem exagero). Inadimplência é a north star (keyline). A variação
+          (▲/▼) lê a tendência: subir inadimplência/atraso = piora. */}
       <section className="mt-2">
         <div
-          className="grid grid-cols-1 gap-px overflow-hidden rounded-xl bg-steel-700
-            shadow-sm sm:grid-cols-3"
+          className="grid grid-cols-1 divide-y divide-line overflow-hidden rounded-xl
+            border border-line bg-steel-50 shadow-xs sm:grid-cols-3 sm:divide-x sm:divide-y-0"
         >
           <KpiCard
-            variant="dark"
+            variant="panel"
             highlight
             label="Taxa de inadimplência"
             value={formatarPct(kpis.pctInadimplenciaValor)}
@@ -150,14 +151,14 @@ export default function Dashboard() {
             trend={{ series: taxasSerie.inadimplencia, higherIsBetter: false, unit: 'pp' }}
           />
           <KpiCard
-            variant="dark"
+            variant="panel"
             label="Taxa em atraso"
             value={formatarPct(kpis.pctAtrasoValor)}
             meta={`${formatarMoeda(kpis.valorEmAtraso)} vencido · inclui ${formatarPct(kpis.pctInadimplenciaValor)} inadimplente`}
             trend={{ series: taxasSerie.atraso, higherIsBetter: false, unit: 'pp' }}
           />
           <KpiCard
-            variant="dark"
+            variant="panel"
             label="Total a receber"
             value={formatarMoeda(kpis.totalAReceber)}
             meta={`posição em ${formatarData(DATA_BASE)} · carteira em aberto`}
