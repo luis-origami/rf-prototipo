@@ -190,7 +190,7 @@ export default function Dashboard() {
             trend={{ series: trilha.recebidoMes, higherIsBetter: true, unit: 'pp' }}
           />
           <KpiCard
-            label="Desempenho do mês"
+            label="Inadimplência do mês"
             value={formatarPct(mes.pctDesempenho)}
             meta={`${formatarMoeda(mes.inadimplenteAposCorte)} sem pagar após 15 dias`}
             valueClassName="text-inadimplente-fg"
