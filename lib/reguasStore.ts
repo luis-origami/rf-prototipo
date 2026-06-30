@@ -56,6 +56,11 @@ export function atualizarReguaInfo(id: string, nome: string, descricao: string):
   salvarReguas(lerReguas().map((r) => (r.id === id ? { ...r, nome, descricao } : r)))
 }
 
+/** remove uma régua do store (a realocação dos clientes é tratada à parte) */
+export function excluirRegua(id: string): void {
+  salvarReguas(lerReguas().filter((r) => r.id !== id))
+}
+
 // snapshot cacheado pela string crua — referência estável entre renders
 let _snapshotRaw: string | null = null
 let _snapshotVal: ReguaCobranca[] = REGUAS_SEED

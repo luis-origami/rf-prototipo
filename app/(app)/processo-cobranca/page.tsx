@@ -13,8 +13,10 @@ import {
   type StatusNotificacao,
   type Template,
 } from '../../../mocks'
-import { lerReguas, salvarReguas, atualizarReguaInfo } from '../../../lib/reguasStore'
+import { lerReguas, salvarReguas, atualizarReguaInfo, excluirRegua } from '../../../lib/reguasStore'
 import { useReguas } from '../../../hooks/useReguas'
+import { useAlocacoes } from '../../../hooks/useAlocacoes'
+import { getClientesDaRegua, realocarClientes } from '../../../lib/alocacaoStore'
 import { getSession, podeAcessar } from '../../../lib/auth'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { Tabs, type TabItem } from '../../../components/ui/Tabs'
@@ -23,6 +25,7 @@ import { Tag } from '../../../components/ui/Tag'
 import { Button } from '../../../components/ui/Button'
 import { Alert } from '../../../components/ui/Alert'
 import { Field } from '../../../components/ui/Field'
+import { Select } from '../../../components/ui/Select'
 import { Textarea } from '../../../components/ui/Textarea'
 import { DataTable, type Column } from '../../../components/ui/DataTable'
 import { EmptyState } from '../../../components/ui/EmptyState'
@@ -84,6 +87,12 @@ function ReguasENotificacoesContent() {
   const [reguaSelId, setReguaSelId] = useState(reguas[0].id)
   const [modalNovaRegua, setModalNovaRegua] = useState(false)
   const [modalEditarRegua, setModalEditarRegua] = useState(false)
+  const [modalExcluirRegua, setModalExcluirRegua] = useState(false)
+  const [destinoReguaId, setDestinoReguaId] = useState('')
+
+  // alocação cliente → régua: conta os clientes da régua selecionada para, ao
+  // excluir, exigir uma régua de destino para realocá-los
+  const alocacoes = useAlocacoes()
 
   function atualizarReguas(transform: (rs: ReguaCobranca[]) => ReguaCobranca[]) {
     salvarReguas(transform(lerReguas()))
@@ -98,6 +107,11 @@ function ReguasENotificacoesContent() {
 
   const reguaSel = listaReguas.find((r) => r.id === reguaSelId) ?? listaReguas[0]
   const templateSel = listaTemplates.find((t) => t.id === templateSelId) ?? listaTemplates[0]
+
+  const clientesDaReguaSel = getClientesDaRegua(reguaSelId, alocacoes)
+  const outrasReguas = listaReguas.filter((r) => r.id !== reguaSelId)
+  // não dá para excluir a última régua — clientes ficariam sem para onde ir
+  const podeExcluirRegua = podeEditarRegua && outrasReguas.length > 0
 
   const historico = notificacoes.filter((n) => n.status !== 'agendada')
   const fila = notificacoes.filter((n) => n.status === 'agendada')
@@ -195,6 +209,30 @@ function ReguasENotificacoesContent() {
     atualizarReguaInfo(reguaSelId, nome, descricao)
     setModalEditarRegua(false)
     toast('Régua atualizada.')
+  }
+
+  function abrirExcluirRegua() {
+    setDestinoReguaId(outrasReguas[0]?.id ?? '')
+    setModalExcluirRegua(true)
+  }
+
+  function confirmarExcluirRegua() {
+    const qtd = clientesDaReguaSel.length
+    if (qtd > 0) {
+      if (!destinoReguaId) return
+      realocarClientes(reguaSelId, destinoReguaId)
+    }
+    const nomeExcluida = reguaSel.nome
+    const nomeDestino = listaReguas.find((r) => r.id === destinoReguaId)?.nome
+    const proxima = outrasReguas[0]
+    excluirRegua(reguaSelId)
+    if (proxima) setReguaSelId(proxima.id)
+    setModalExcluirRegua(false)
+    toast(
+      qtd > 0
+        ? `Régua "${nomeExcluida}" excluída · ${qtd} cliente(s) movido(s) para "${nomeDestino}".`
+        : `Régua "${nomeExcluida}" excluída.`,
+    )
   }
 
   // cria um template e o devolve já com id — usado pelo atalho dentro do modal
@@ -343,12 +381,18 @@ function ReguasENotificacoesContent() {
           {/* etapas da régua selecionada */}
           <Card>
             <Card.Header>
-              <span className="flex min-w-0 items-center gap-2">
+              <span className="flex min-w-0 flex-wrap items-center gap-2">
                 <Card.Title>{reguaSel.nome}</Card.Title>
                 {podeEditarRegua && (
                   <Button variant="ghost" size="sm" onClick={() => setModalEditarRegua(true)}>
                     <IconEdit size={13} />
                     Editar régua
+                  </Button>
+                )}
+                {podeExcluirRegua && (
+                  <Button variant="ghost" size="sm" onClick={abrirExcluirRegua}>
+                    <IconTrash2 size={13} />
+                    Excluir régua
                   </Button>
                 )}
               </span>
@@ -503,6 +547,55 @@ function ReguasENotificacoesContent() {
         descricaoInicial={reguaSel.descricao}
         modo="editar"
       />
+
+      {/* exclusão de régua — se houver clientes alocados, exige régua de destino */}
+      <Modal open={modalExcluirRegua} onClose={() => setModalExcluirRegua(false)}>
+        <Modal.Header>Excluir régua?</Modal.Header>
+        <Modal.Body>
+          <p className="text-sm text-neutral-700">
+            A régua <b>{reguaSel.nome}</b> será removida. Esta ação não pode ser desfeita.
+          </p>
+          {clientesDaReguaSel.length > 0 ? (
+            <div className="mt-4">
+              <p className="text-sm text-neutral-700">
+                <b>{clientesDaReguaSel.length}</b>{' '}
+                {clientesDaReguaSel.length === 1 ? 'cliente está alocado' : 'clientes estão alocados'} a
+                esta régua. Escolha para qual régua movê-los:
+              </p>
+              <div className="mt-3">
+                <Field label="Mover clientes para">
+                  <Select
+                    value={destinoReguaId}
+                    onChange={(e) => setDestinoReguaId(e.target.value)}
+                    className="w-full"
+                  >
+                    {outrasReguas.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.nome}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-ink-muted">Nenhum cliente está alocado a esta régua.</p>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setModalExcluirRegua(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={confirmarExcluirRegua}
+            disabled={clientesDaReguaSel.length > 0 && !destinoReguaId}
+          >
+            <IconTrash2 size={14} />
+            {clientesDaReguaSel.length > 0 ? 'Mover clientes e excluir' : 'Excluir régua'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       <NovoTemplateModal
         open={modalNovoTemplate}
