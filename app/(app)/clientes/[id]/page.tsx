@@ -136,9 +136,6 @@ function ClienteDetalheContent({ id }: { id: string }) {
 
   const regua = listaReguas.find((r) => r.id === reguaId) ?? listaReguas[0]
   const reguaEspecifica = !!regua.clienteId
-  const piorAtraso = boletosCliente
-    .filter((b) => b.status === 'atrasado' || b.status === 'inadimplente')
-    .reduce<number | null>((max, b) => Math.max(max ?? 0, b.diasAtraso ?? 0), null)
   // negativação pausa a régua por completo — tratativa passa a ser manual
   const pausada = estadoProcesso === 'pausado' || negativado
 
@@ -375,7 +372,11 @@ function ClienteDetalheContent({ id }: { id: string }) {
               {reguaEspecifica && <Tag>Específica do cliente</Tag>}
             </span>
             <span className="label-mono text-ink-muted">
-              {pausada ? 'Pausada' : piorAtraso != null ? `Posição · D+${piorAtraso}` : 'Sem atraso'}
+              {pausada
+                ? 'Pausada'
+                : boletosAbertos.length === 0
+                  ? 'Sem títulos em aberto'
+                  : `${boletosAbertos.length} ${boletosAbertos.length === 1 ? 'título' : 'títulos'} em aberto`}
             </span>
           </Card.Header>
           <Card.Body>
@@ -390,7 +391,7 @@ function ClienteDetalheContent({ id }: { id: string }) {
               </div>
             )}
             <p className="mb-5 max-w-2xl text-sm text-ink-muted">{regua.descricao}</p>
-            <ReguaTimeline regua={regua} diasAtraso={piorAtraso} pausada={pausada} />
+            <ReguaTimeline regua={regua} boletos={boletosAbertos} pausada={pausada} />
           </Card.Body>
           {/* régua padrão é editada na configuração global; aqui só a específica */}
           {!reguaEspecifica && podeOperarRegua && (
