@@ -43,6 +43,29 @@ export const TIPO_CLIENTE_LABEL: Record<TipoClienteFiltro, string> = {
   pf: 'Consumidor final',
   orgao_publico: 'Órgãos públicos',
 }
+
+// rótulo no singular — segmento de um cliente específico (ex.: cabeçalho do detalhe)
+export const TIPO_CLIENTE_SINGULAR: Record<TipoCliente, string> = {
+  oficina: 'Oficina mecânica',
+  transportadora: 'Transportadora',
+  revenda: 'Revenda de peças',
+  frotista: 'Frotista',
+  pf: 'Consumidor final',
+  produtor: 'Produtor rural',
+  orgao_publico: 'Órgão público',
+}
+
+// UF por cidade — dado de origem Certtus. Carteira atual concentrada em Minas Gerais.
+const CIDADE_UF: Record<string, string> = {
+  'Formiga': 'MG', 'Belo Horizonte': 'MG', 'BH': 'MG', 'Piumhi': 'MG', 'Arcos': 'MG',
+  'Lagoa da Prata': 'MG', 'Lavras': 'MG', 'Passos': 'MG', 'Três Pontas': 'MG',
+  'Betim': 'MG', 'Oliveira': 'MG', 'Divinópolis': 'MG', 'Itaúna': 'MG',
+  'Nova Serrana': 'MG', 'Carmo do Cajuru': 'MG', 'Itapecerica': 'MG',
+}
+
+export function ufDaCidade(cidade: string): string {
+  return CIDADE_UF[cidade] ?? 'MG'
+}
 export type SituacaoCliente = 'adimplente' | 'atrasado' | 'inadimplente'
 export type StatusBoleto = 'pago' | 'pago_atraso' | 'avencer' | 'hoje' | 'atrasado' | 'inadimplente'
 export type StatusNotificacao = 'agendada' | 'enviada' | 'entregue' | 'lida' | 'respondida'

@@ -3,7 +3,7 @@
 import { use, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { getClienteById, reguas, type ReguaCobranca } from '../../../../../../mocks'
+import { getClienteById, type ReguaCobranca } from '../../../../../../mocks'
 import { useReguas } from '../../../../../../hooks/useReguas'
 import { adicionarRegua } from '../../../../../../lib/reguasStore'
 import { getSession, podeAcessar } from '../../../../../../lib/auth'
@@ -18,9 +18,9 @@ import { EmptyState } from '../../../../../../components/ui/EmptyState'
 import { IconChevronLeft } from '../../../../../../components/icons'
 
 /* Tela de criação de régua específica de um cliente. Diferente da régua global
-   (editada em Réguas e Notificações), a régua específica nasce de uma base,
-   carrega o clienteId e passa a ser editável no detalhe do cliente. Persiste
-   no store — sobrevive à navegação e ao reload. */
+   (editada em Réguas e Notificações), a régua específica pode nascer vazia ou
+   a partir de uma base, carrega o clienteId e passa a ser editável no detalhe
+   do cliente. Persiste no store — sobrevive à navegação e ao reload. */
 
 export default function NovaReguaCliente({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -35,7 +35,8 @@ export default function NovaReguaCliente({ params }: { params: Promise<{ id: str
 
   const [nome, setNome] = useState(`Régua · ${cliente?.nome ?? 'cliente'}`)
   const [descricao, setDescricao] = useState('')
-  const [baseId, setBaseId] = useState(bases[0]?.id ?? reguas[0].id)
+  // '' = começar vazia (sem base); a régua nasce sem marcos
+  const [baseId, setBaseId] = useState('')
   const [erro, setErro] = useState('')
 
   const base = useMemo(() => bases.find((b) => b.id === baseId), [bases, baseId])
@@ -102,7 +103,7 @@ export default function NovaReguaCliente({ params }: { params: Promise<{ id: str
       <PageHeader
         eyebrow="Régua específica do cliente"
         title="Nova régua"
-        description={`A régua nasce de uma base e passa a valer só para ${cliente.nome}. Depois de criar, ajuste os marcos pelo botão "Editar régua" no detalhe do cliente.`}
+        description={`A régua passa a valer só para ${cliente.nome}. Você pode começá-la vazia ou a partir de uma base e, depois de criar, ajustar os marcos pelo botão "Editar régua" no detalhe do cliente.`}
       />
 
       <Card className="mt-5 max-w-2xl">
@@ -124,10 +125,11 @@ export default function NovaReguaCliente({ params }: { params: Promise<{ id: str
             helper={
               base
                 ? `${base.etapas.length} marcos copiados — ajuste depois de criar.`
-                : 'Os marcos da régua base são copiados.'
+                : 'A régua nasce vazia — você adiciona os marcos depois.'
             }
           >
             <Select value={baseId} onChange={(e) => setBaseId(e.target.value)} className="w-full">
+              <option value="">Começar vazia (sem base)</option>
               {bases.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.nome}

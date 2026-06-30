@@ -11,8 +11,9 @@ import {
   formatarData,
   reguas,
   statusEfetivo,
-  situacaoEfetiva,
   ORDEM_SEVERIDADE,
+  TIPO_CLIENTE_SINGULAR,
+  ufDaCidade,
   type Boleto,
   type Comunicacao,
   type EstadoProcesso,
@@ -298,20 +299,20 @@ function ClienteDetalheContent({ id }: { id: string }) {
       {/* cabeçalho da entidade */}
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="label-mono text-ink-muted">{cliente.tipo}</span>
-            <StatusBadge status={situacaoEfetiva(cliente)} />
-            {negativado ? <NegativadoBadge /> : <ProcessBadge estado={estadoProcesso} />}
-          </div>
+          {(negativado || estadoProcesso !== 'normal') && (
+            <div className="flex flex-wrap items-center gap-2">
+              {negativado ? <NegativadoBadge /> : <ProcessBadge estado={estadoProcesso} />}
+            </div>
+          )}
           <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-ink lg:text-3xl">
             {cliente.nome}
           </h1>
           <p className="mt-1 font-mono text-sm text-ink-muted">
-            {cliente.cidade} · {cliente.telefone} · {cliente.email}
+            {TIPO_CLIENTE_SINGULAR[cliente.tipo]} · {cliente.cidade}/{ufDaCidade(cliente.cidade)} · {cliente.telefone} · {cliente.email}
           </p>
         </div>
         <div className="shrink-0">
-          <FactGroup>
+          <FactGroup source={null}>
             <Fact label="CNPJ / CPF" value={cliente.cnpjCpf} />
             <Fact label="Saldo em aberto" value={formatarMoeda(cliente.saldoAberto)} />
           </FactGroup>

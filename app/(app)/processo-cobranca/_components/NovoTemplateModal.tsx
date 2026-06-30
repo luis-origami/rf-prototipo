@@ -66,8 +66,7 @@ function TemplateForm({ onClose, onSubmit }: Omit<NovoTemplateModalProps, 'open'
               helper={
                 'Variáveis: [NOME] · [NÚMERO] · [VALOR] · [DATA] · ' +
                 'abono: {{valor_original}} · {{juros}} · {{multa}} · {{juros_abonado}} · ' +
-                '{{multa_abonada}} · {{valor_final}} · {{data_promessa}} · {{validade_abono}}. ' +
-                'Nenhuma mensagem sai sem template aprovado.'
+                '{{multa_abonada}} · {{valor_final}} · {{data_promessa}} · {{validade_abono}}.'
               }
             >
               <Textarea

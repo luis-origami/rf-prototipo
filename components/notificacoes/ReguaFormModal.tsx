@@ -9,9 +9,9 @@ import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
 import { Textarea } from '../ui/Textarea'
 
-/* Criação de régua (geral ou específica de cliente). Toda régua nova nasce
-   de uma base existente — as etapas são copiadas e ajustadas depois, nunca
-   se parte do zero (a cadência canônica é o ponto de partida). */
+/* Criação de régua (geral ou específica de cliente). A régua pode nascer
+   vazia (sem nenhum marco, montada do zero) ou a partir de uma base existente
+   — neste caso as etapas são copiadas e ajustadas depois. */
 
 export interface ReguaFormValues {
   nome: string
@@ -55,7 +55,8 @@ function ReguaForm({
 }: ReguaFormProps) {
   const [nome, setNome] = useState(nomeInicial)
   const [descricao, setDescricao] = useState(descricaoInicial)
-  const [baseId, setBaseId] = useState(bases[0]?.id ?? '')
+  // '' = começar vazia (sem base); a régua nasce sem marcos
+  const [baseId, setBaseId] = useState('')
   const [erro, setErro] = useState('')
 
   const editando = modo === 'editar'
@@ -93,10 +94,11 @@ function ReguaForm({
               helper={
                 base
                   ? `${base.etapas.length} marcos copiados — ajuste depois de criar.`
-                  : 'Os marcos da régua base são copiados.'
+                  : 'A régua nasce vazia — você adiciona os marcos depois.'
               }
             >
               <Select value={baseId} onChange={(e) => setBaseId(e.target.value)} className="w-full">
+                <option value="">Começar vazia (sem base)</option>
                 {bases.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.nome}

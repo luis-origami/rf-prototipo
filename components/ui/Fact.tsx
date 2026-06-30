@@ -27,14 +27,15 @@ export function Fact({ label, value, source }: FactProps) {
 
 /* Grupo de fatos da mesma origem — uma tag para todos. */
 interface FactGroupProps {
-  source?: string
+  /** origem do dado — passe null para não exibir a tag */
+  source?: string | null
   children: React.ReactNode
 }
 
 export function FactGroup({ source = 'Certtus', children }: FactGroupProps) {
   return (
     <div className="flex flex-col items-start gap-2">
-      <Tag variant="source">{source}</Tag>
+      {source && <Tag variant="source">{source}</Tag>}
       <div className="flex flex-wrap gap-x-10 gap-y-4">{children}</div>
     </div>
   )

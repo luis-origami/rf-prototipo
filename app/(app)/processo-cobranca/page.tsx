@@ -230,7 +230,7 @@ function ReguasENotificacoesContent() {
   }
 
   // exclusão bloqueada se alguma etapa de régua usa o template — nenhuma
-  // etapa pode ficar sem texto (nada sai sem template aprovado)
+  // etapa pode ficar sem texto
   const etapasUsandoTemplate = listaReguas
     .flatMap((r) => r.etapas)
     .filter((e) => e.templateId === templateSel.id).length
@@ -411,7 +411,7 @@ function ReguasENotificacoesContent() {
               )}
               <Field
                 label="Corpo da mensagem"
-                helper="Variáveis: [NOME] · [NÚMERO] · [VALOR] · [DATA]. Nenhuma mensagem sai sem template aprovado."
+                helper="Variáveis: [NOME] · [NÚMERO] · [VALOR] · [DATA]."
               >
                 <Textarea
                   value={corpo}
@@ -520,8 +520,7 @@ function ReguasENotificacoesContent() {
               <b>
                 {etapasUsandoTemplate} {etapasUsandoTemplate === 1 ? 'marco' : 'marcos'}
               </b>{' '}
-              de régua. Troque o template desses marcos antes de excluir — nenhuma notificação
-              sai sem template aprovado.
+              de régua. Troque o template desses marcos antes de excluir.
             </>
           ) : ultimoTemplate ? (
             <>É o último template — os marcos da régua precisam de ao menos um para existir.</>
