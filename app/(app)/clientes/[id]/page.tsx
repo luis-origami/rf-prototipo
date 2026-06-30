@@ -14,21 +14,15 @@ import {
   ORDEM_SEVERIDADE,
   TIPO_CLIENTE_SINGULAR,
   ufDaCidade,
+  tituloEmProtesto,
   type Boleto,
   type Comunicacao,
   type EstadoProcesso,
 } from '../../../../mocks'
 import { useReguas } from '../../../../hooks/useReguas'
-import { useNegativacoes } from '../../../../hooks/useNegativacoes'
 import { getSession, podeAcessar } from '../../../../lib/auth'
 import { processarAbonoDaComunicacao } from '../../../../lib/abonos'
-import {
-  isNegativado,
-  getNegativacao,
-  negativarCliente,
-  reverterNegativacao,
-  baixarHistoricoNegativacao,
-} from '../../../../lib/negativacao'
+import { baixarHistoricoNegativacao } from '../../../../lib/negativacao'
 import { Button } from '../../../../components/ui/Button'
 import { Card } from '../../../../components/ui/Card'
 import { Modal } from '../../../../components/ui/Modal'
@@ -36,7 +30,6 @@ import { Tabs, type TabItem } from '../../../../components/ui/Tabs'
 import { StatusBadge } from '../../../../components/ui/StatusBadge'
 import { ProcessBadge } from '../../../../components/ui/ProcessBadge'
 import { NegativadoBadge } from '../../../../components/ui/NegativadoBadge'
-import { Textarea } from '../../../../components/ui/Textarea'
 import { Fact, FactGroup } from '../../../../components/ui/Fact'
 import { Money } from '../../../../components/ui/Money'
 import { Tag } from '../../../../components/ui/Tag'
@@ -70,9 +63,6 @@ function ClienteDetalheContent({ id }: { id: string }) {
   const ehComercial = perfil === 'comercial'
 
   const { toast, toastHost } = useToast()
-  const negativacoes = useNegativacoes()
-  const negativado = isNegativado(id, negativacoes)
-  const registroNeg = getNegativacao(id, negativacoes)
   // aba inicial: comercial só tem Títulos; demais respeitam ?tab= (ex.: vindo de
   // Títulos), senão abrem na Régua
   const tabParam = searchParams.get('tab')
@@ -85,8 +75,6 @@ function ClienteDetalheContent({ id }: { id: string }) {
         : 'regua'
   const [tab, setTab] = useState<TabId>(tabInicial)
   const [estadoProcesso, setEstadoProcesso] = useState<EstadoProcesso>(cliente?.estadoProcesso ?? 'normal')
-  const [modalNegativar, setModalNegativar] = useState(false)
-  const [motivoNeg, setMotivoNeg] = useState('')
   const [modalRegua, setModalRegua] = useState(false)
   // réguas vigentes do store: config global + específicas de cliente (que
   // persistem com clienteId). As específicas deste cliente são editáveis aqui;
@@ -121,6 +109,14 @@ function ClienteDetalheContent({ id }: { id: string }) {
     [boletosCliente],
   )
 
+  // negativação é DERIVADA: cliente com título em protesto (Certtus) está
+  // negativado — não há ação manual na plataforma
+  const titulosEmProtesto = useMemo(
+    () => boletosCliente.filter(tituloEmProtesto),
+    [boletosCliente],
+  )
+  const negativado = titulosEmProtesto.length > 0
+
   if (!cliente) {
     return (
       <EmptyState
@@ -137,7 +133,8 @@ function ClienteDetalheContent({ id }: { id: string }) {
 
   const regua = listaReguas.find((r) => r.id === reguaId) ?? listaReguas[0]
   const reguaEspecifica = !!regua.clienteId
-  // negativação pausa a régua por completo — tratativa passa a ser manual
+  // título em protesto (= negativado) pausa a régua por completo — tratativa
+  // passa a ser manual
   const pausada = estadoProcesso === 'pausado' || negativado
 
   function alternarPausa() {
@@ -146,38 +143,12 @@ function ClienteDetalheContent({ id }: { id: string }) {
     toast(proxima === 'pausado' ? 'Régua pausada.' : 'Régua retomada.')
   }
 
-  function abrirNegativacao() {
-    setMotivoNeg('')
-    setModalNegativar(true)
-  }
-
-  function confirmarNegativacao() {
-    const negativadoPor = sessao?.email ?? 'financeiro@retifica.com'
-    const motivo = motivoNeg.trim() || undefined
-    const registro = negativarCliente({ clienteId: id, negativadoPor, motivo })
-    // gera o histórico completo do cliente para instruir a negativação
-    // (executada fora do sistema)
-    baixarHistoricoNegativacao(id, {
-      negativadoPor: registro.negativadoPor,
-      negativadoEm: registro.negativadoEm,
-      motivo: registro.motivo,
-    })
-    setModalNegativar(false)
-    toast('Cliente negativado · régua pausada e histórico gerado.')
-  }
-
-  function reverter() {
-    reverterNegativacao(id)
-    toast('Negativação revertida · régua liberada para automação.')
-  }
-
   function baixarHistorico() {
+    const numeros = titulosEmProtesto.map((b) => b.numero).join(', ')
     baixarHistoricoNegativacao(id, {
-      negativadoPor: registroNeg?.negativadoPor,
-      negativadoEm: registroNeg?.negativadoEm,
-      motivo: registroNeg?.motivo,
+      motivo: numeros ? `Título(s) em protesto na Certtus: ${numeros}.` : undefined,
     })
-    toast('Histórico de negativação gerado.')
+    toast('Histórico do cliente gerado.')
   }
 
   function confirmarTrocaRegua() {
@@ -274,7 +245,17 @@ function ClienteDetalheContent({ id }: { id: string }) {
       header: 'Status',
       center: true,
       sortValue: (b) => ORDEM_SEVERIDADE[statusEfetivo(b)] * 1000 + (b.diasAtraso ?? 0),
-      render: (b) => <StatusBadge status={statusEfetivo(b)} dias={b.status === 'pago' ? undefined : b.diasAtraso} />,
+      render: (b) => (
+        <span className="inline-flex flex-wrap items-center justify-center gap-1.5">
+          <StatusBadge status={statusEfetivo(b)} dias={b.status === 'pago' ? undefined : b.diasAtraso} />
+          {tituloEmProtesto(b) && (
+            <span className="inline-flex items-center rounded-sm border border-inadimplente-border
+              bg-inadimplente-bg px-2 py-0.5 font-mono text-xs font-medium text-inadimplente-fg">
+              Em protesto
+            </span>
+          )}
+        </span>
+      ),
     },
   ]
 
@@ -319,25 +300,21 @@ function ClienteDetalheContent({ id }: { id: string }) {
         </div>
       </div>
 
-      {/* ações do processo — destrutiva isolada à direita (DS v5 slide 13).
-          Negativado: automação desligada (tratativa 100% humana) — só restam
-          gerar o histórico e reverter. */}
+      {/* ações do processo. Negativado (= título em protesto na Certtus):
+          automação desligada (tratativa 100% humana) — resta gerar o histórico.
+          A negativação não é manual: vem do protesto, feito na Certtus. */}
       {podeOperarRegua && (
         <div className="mt-5 flex flex-wrap items-center gap-2 border-y border-line py-3">
           {negativado ? (
             <>
               <span className="inline-flex items-center gap-1.5 font-mono text-xs text-inadimplente-fg">
                 <IconBan size={13} className="shrink-0" />
-                Régua pausada por negativação · tratativa manual
+                Cliente negativado por protesto · régua pausada · tratativa manual
               </span>
-              <Button variant="secondary" size="sm" onClick={baixarHistorico}>
-                <IconDownload size={14} />
-                Baixar histórico
-              </Button>
               <span className="ml-auto">
-                <Button variant="secondary" size="sm" onClick={reverter}>
-                  <IconPlay size={14} />
-                  Reverter negativação
+                <Button variant="secondary" size="sm" onClick={baixarHistorico}>
+                  <IconDownload size={14} />
+                  Gerar histórico
                 </Button>
               </span>
             </>
@@ -350,12 +327,6 @@ function ClienteDetalheContent({ id }: { id: string }) {
               <Button variant="secondary" size="sm" onClick={() => { setReguaPendente(reguaId); setModalRegua(true) }}>
                 Trocar régua
               </Button>
-              <span className="ml-auto">
-                <Button variant="destructive" size="sm" onClick={abrirNegativacao}>
-                  <IconBan size={14} />
-                  Negativar
-                </Button>
-              </span>
             </>
           )}
         </div>
@@ -386,7 +357,8 @@ function ClienteDetalheContent({ id }: { id: string }) {
                 bg-inadimplente-bg px-3 py-2.5 text-sm text-inadimplente-fg">
                 <IconBan size={15} className="mt-0.5 shrink-0" />
                 <span>
-                  Cliente negativado{registroNeg ? ` em ${formatarData(registroNeg.negativadoEm.slice(0, 10))}` : ''}.
+                  Cliente negativado por título em protesto na Certtus
+                  {titulosEmProtesto.length > 0 ? ` (${titulosEmProtesto.map((b) => b.numero).join(', ')})` : ''}.
                   A régua está pausada e nenhum envio automático ocorre — a cobrança segue por tratativa manual.
                 </span>
               </div>
@@ -473,41 +445,6 @@ function ClienteDetalheContent({ id }: { id: string }) {
           )}
         </div>
       )}
-
-      {/* negativação — confirmação destrutiva; nunca a opção destacada por padrão */}
-      <Modal open={modalNegativar} onClose={() => setModalNegativar(false)}>
-        <Modal.Header>Negativar cliente?</Modal.Header>
-        <Modal.Body>
-          <p className="text-sm text-neutral-700">
-            Marca <b>{cliente.nome}</b> como negativado. A marcação é apenas visual — o sistema{' '}
-            <b>não</b> aciona órgão de proteção ao crédito. Ao confirmar:
-          </p>
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-neutral-700">
-            <li>a régua de cobrança é <b>pausada por completo</b> — nenhum envio automático;</li>
-            <li>a tratativa passa a ser <b>100% humana</b> (só contatos manuais seguem);</li>
-            <li>é gerado um <b>histórico</b> completo do cliente para instruir a negativação.</li>
-          </ul>
-          <div className="mt-4">
-            <Field label="Motivo (opcional)">
-              <Textarea
-                value={motivoNeg}
-                onChange={(e) => setMotivoNeg(e.target.value)}
-                placeholder="Descreva o motivo da negativação — consta no histórico…"
-                rows={3}
-              />
-            </Field>
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setModalNegativar(false)}>
-            Cancelar
-          </Button>
-          <Button variant="destructive" onClick={confirmarNegativacao}>
-            <IconBan size={14} />
-            Negativar e gerar histórico
-          </Button>
-        </Modal.Footer>
-      </Modal>
 
       {/* troca de régua */}
       <Modal open={modalRegua} onClose={() => setModalRegua(false)}>

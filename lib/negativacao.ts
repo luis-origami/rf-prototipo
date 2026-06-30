@@ -1,13 +1,13 @@
-// Negativação de cliente — estado de processo do Cobrança RF.
+// Negativação de cliente — DERIVADA do protesto de título na Certtus.
 //
-// IMPORTANTE: negativação aqui é MARCAÇÃO VISUAL, sem operacionalização
-// automática. O sistema NÃO comunica órgão de proteção ao crédito nem executa
-// nada por conta própria. Ao negativar:
-//   • o cliente recebe o selo "Negativado" (lista e detalhe);
+// IMPORTANTE: não há ação manual de negativação na plataforma. O protesto é
+// feito na Certtus (externamente); quando um título do cliente está em
+// protesto (b.emProtesto), o sistema entende o cliente como negativado:
+//   • o cliente recebe o selo "Negativado" (detalhe);
 //   • a régua de cobrança é pausada por completo — nenhum envio automático;
 //   • a tratativa passa a ser 100% humana (só contatos manuais seguem).
-// O sistema apenas gera um histórico completo do cliente para instruir a
-// negativação fora do sistema.
+// Este módulo apenas gera um histórico completo do cliente, disponível quando
+// há título em protesto. A negativação em órgão de crédito é externa.
 
 import {
   getBoletosDoCliente,
@@ -21,112 +21,6 @@ import {
   type Boleto,
   type Comunicacao,
 } from '../mocks'
-
-export interface RegistroNegativacao {
-  clienteId: string
-  negativadoEm: string // ISO datetime
-  negativadoPor: string
-  motivo?: string
-}
-
-const LS_KEY = 'rf_negativacoes'
-const LS_VERSION = 'rf_negativacoes_v1'
-
-// Seed de teste — um cliente já negativado para exercitar selo, filtro,
-// coluna Processo e histórico sem precisar negativar na mão.
-export const NEGATIVACOES_SEED: RegistroNegativacao[] = [
-  {
-    clienteId: 'c03',
-    negativadoEm: '2026-06-10T11:00:00',
-    negativadoPor: 'financeiro@retifica.com',
-    motivo: 'Inadimplência acima de 90 dias e promessa de pagamento descumprida.',
-  },
-]
-
-function isBrowser() {
-  return typeof window !== 'undefined'
-}
-
-function lerNegativacoes(): RegistroNegativacao[] {
-  if (!isBrowser()) return NEGATIVACOES_SEED
-  if (!localStorage.getItem(LS_VERSION)) {
-    localStorage.setItem(LS_KEY, JSON.stringify(NEGATIVACOES_SEED))
-    localStorage.setItem(LS_VERSION, '1')
-  }
-  try {
-    const raw = localStorage.getItem(LS_KEY)
-    const parsed = raw ? JSON.parse(raw) : []
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-function salvar(registros: RegistroNegativacao[]): void {
-  if (!isBrowser()) return
-  localStorage.setItem(LS_KEY, JSON.stringify(registros))
-  window.dispatchEvent(new Event('negativacoes-changed'))
-}
-
-let _snapshotRaw: string | null = null
-let _snapshotVal: RegistroNegativacao[] = NEGATIVACOES_SEED
-
-export function getNegativacoesSnapshot(): RegistroNegativacao[] {
-  if (!isBrowser()) return NEGATIVACOES_SEED
-  lerNegativacoes() // garante versão/seed
-  const raw = localStorage.getItem(LS_KEY)
-  if (raw !== _snapshotRaw) {
-    _snapshotRaw = raw
-    _snapshotVal = raw ? JSON.parse(raw) : []
-  }
-  return _snapshotVal
-}
-
-export function getServerNegativacoesSnapshot(): RegistroNegativacao[] {
-  return NEGATIVACOES_SEED
-}
-
-export function subscribeNegativacoes(cb: () => void): () => void {
-  window.addEventListener('negativacoes-changed', cb)
-  window.addEventListener('storage', cb)
-  return () => {
-    window.removeEventListener('negativacoes-changed', cb)
-    window.removeEventListener('storage', cb)
-  }
-}
-
-export function isNegativado(clienteId: string, lista: RegistroNegativacao[]): boolean {
-  return lista.some((n) => n.clienteId === clienteId)
-}
-
-export function getNegativacao(
-  clienteId: string,
-  lista: RegistroNegativacao[],
-): RegistroNegativacao | undefined {
-  return lista.find((n) => n.clienteId === clienteId)
-}
-
-export interface NegativarParams {
-  clienteId: string
-  negativadoPor: string
-  motivo?: string
-}
-
-export function negativarCliente(params: NegativarParams): RegistroNegativacao {
-  const novo: RegistroNegativacao = {
-    clienteId: params.clienteId,
-    negativadoEm: new Date().toISOString(),
-    negativadoPor: params.negativadoPor,
-    motivo: params.motivo?.trim() || undefined,
-  }
-  // idempotente — substitui registro anterior do mesmo cliente, se houver
-  salvar([novo, ...lerNegativacoes().filter((n) => n.clienteId !== params.clienteId)])
-  return novo
-}
-
-export function reverterNegativacao(clienteId: string): void {
-  salvar(lerNegativacoes().filter((n) => n.clienteId !== clienteId))
-}
 
 // ── Histórico de negativação ───────────────────────────────────────────────
 // Documento autônomo (HTML imprimível) com o histórico completo do cliente:
@@ -327,7 +221,7 @@ export function baixarHistoricoNegativacao(
   clienteId: string,
   meta?: { negativadoPor?: string; negativadoEm?: string; motivo?: string },
 ): void {
-  if (!isBrowser()) return
+  if (typeof window === 'undefined') return
   const cliente = getClienteById(clienteId)
   const slug = (cliente?.nome ?? clienteId)
     .toLowerCase()

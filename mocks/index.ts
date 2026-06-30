@@ -96,6 +96,9 @@ export interface Boleto {
   status: StatusBoleto
   diasAtraso?: number
   dataPagamento?: string
+  /** protesto registrado na Certtus (externo, pela equipe) — read-only.
+      Título em protesto negativa o cliente automaticamente. */
+  emProtesto?: boolean
 }
 
 export interface NotificacaoHistorico {
@@ -367,21 +370,21 @@ export const boletos: Boleto[] = [
 
   // ── INADIMPLENTE (13) ────────────────────────────────────────────────────
   { id: 'b088', clienteId: 'c03', numero: bol(1088), nfNumero: nf(8328), descricao: svc[0], valor: 12_000, vencimento: '2026-03-10', emissao: '2026-02-24', status: 'inadimplente', diasAtraso: 86 },
-  { id: 'b089', clienteId: 'c03', numero: bol(1089), nfNumero: nf(8329), descricao: svc[2], valor: 11_600, vencimento: '2026-02-14', emissao: '2026-01-31', status: 'inadimplente', diasAtraso: 110 },
-  { id: 'b090', clienteId: 'c08', numero: bol(1090), nfNumero: nf(8330), descricao: svc[1], valor: 9_800,  vencimento: '2026-03-05', emissao: '2026-02-19', status: 'inadimplente', diasAtraso: 91 },
+  { id: 'b089', clienteId: 'c03', numero: bol(1089), nfNumero: nf(8329), descricao: svc[2], valor: 11_600, vencimento: '2026-02-14', emissao: '2026-01-31', status: 'inadimplente', diasAtraso: 110, emProtesto: true },
+  { id: 'b090', clienteId: 'c08', numero: bol(1090), nfNumero: nf(8330), descricao: svc[1], valor: 9_800,  vencimento: '2026-03-05', emissao: '2026-02-19', status: 'inadimplente', diasAtraso: 91, emProtesto: true },
   { id: 'b091', clienteId: 'c08', numero: bol(1091), nfNumero: nf(8331), descricao: svc[3], valor: 8_900,  vencimento: '2026-02-20', emissao: '2026-02-06', status: 'inadimplente', diasAtraso: 104 },
   { id: 'b092', clienteId: 'c11', numero: bol(1092), nfNumero: nf(8332), descricao: svc[0], valor: 12_000, vencimento: '2026-03-01', emissao: '2026-02-15', status: 'inadimplente', diasAtraso: 95 },
   { id: 'b093', clienteId: 'c11', numero: bol(1093), nfNumero: nf(8333), descricao: svc[4], valor: 11_400, vencimento: '2026-02-10', emissao: '2026-01-27', status: 'inadimplente', diasAtraso: 114 },
   { id: 'b094', clienteId: 'c11', numero: bol(1094), nfNumero: nf(8334), descricao: svc[2], valor: 7_800,  vencimento: '2026-01-15', emissao: '2026-01-01', status: 'inadimplente', diasAtraso: 140 },
   { id: 'b095', clienteId: 'c14', numero: bol(1095), nfNumero: nf(8335), descricao: svc[5], valor: 8_200,  vencimento: '2026-03-15', emissao: '2026-03-01', status: 'inadimplente', diasAtraso: 81 },
-  { id: 'b096', clienteId: 'c14', numero: bol(1096), nfNumero: nf(8336), descricao: svc[0], valor: 6_700,  vencimento: '2026-02-28', emissao: '2026-02-14', status: 'inadimplente', diasAtraso: 96 },
+  { id: 'b096', clienteId: 'c14', numero: bol(1096), nfNumero: nf(8336), descricao: svc[0], valor: 6_700,  vencimento: '2026-02-28', emissao: '2026-02-14', status: 'inadimplente', diasAtraso: 96, emProtesto: true },
   { id: 'b097', clienteId: 'c18', numero: bol(1097), nfNumero: nf(8337), descricao: svc[1], valor: 11_200, vencimento: '2026-03-20', emissao: '2026-03-06', status: 'inadimplente', diasAtraso: 76 },
-  { id: 'b098', clienteId: 'c18', numero: bol(1098), nfNumero: nf(8338), descricao: svc[3], valor: 9_400,  vencimento: '2026-02-25', emissao: '2026-02-11', status: 'inadimplente', diasAtraso: 99 },
+  { id: 'b098', clienteId: 'c18', numero: bol(1098), nfNumero: nf(8338), descricao: svc[3], valor: 9_400,  vencimento: '2026-02-25', emissao: '2026-02-11', status: 'inadimplente', diasAtraso: 99, emProtesto: true },
   { id: 'b099', clienteId: 'c22', numero: bol(1099), nfNumero: nf(8339), descricao: svc[2], valor: 10_200, vencimento: '2026-03-25', emissao: '2026-03-11', status: 'inadimplente', diasAtraso: 71 },
   { id: 'b100', clienteId: 'c30', numero: bol(1100), nfNumero: nf(8340), descricao: svc[4], valor: 11_200, vencimento: '2026-03-12', emissao: '2026-02-26', status: 'inadimplente', diasAtraso: 84 },
   // perda provável — atraso acima de 180 dias (faixa 180+ do aging)
   { id: 'b107', clienteId: 'c35', numero: bol(1107), nfNumero: nf(8347), descricao: svc[1], valor: 7_300,  vencimento: '2025-11-15', emissao: '2025-11-01', status: 'inadimplente', diasAtraso: 201 },
-  { id: 'b108', clienteId: 'c26', numero: bol(1108), nfNumero: nf(8348), descricao: svc[3], valor: 9_000,  vencimento: '2025-10-30', emissao: '2025-10-16', status: 'inadimplente', diasAtraso: 217 },
+  { id: 'b108', clienteId: 'c26', numero: bol(1108), nfNumero: nf(8348), descricao: svc[3], valor: 9_000,  vencimento: '2025-10-30', emissao: '2025-10-16', status: 'inadimplente', diasAtraso: 217, emProtesto: true },
 ]
 
 // ── Histórico de notificações ─────────────────────────────────────────────
@@ -679,6 +682,24 @@ export function getClienteById(id: string): Cliente | undefined {
 
 export function getBoletosDoCliente(clienteId: string): Boleto[] {
   return boletos.filter(b => b.clienteId === clienteId)
+}
+
+// ── Protesto e negativação ────────────────────────────────────────────────
+// O protesto do título é feito na Certtus, externamente (pela equipe). O
+// Cobrança RF apenas LÊ esse estado (b.emProtesto, read-only). Um cliente é
+// considerado negativado quando tem ao menos um título EM ABERTO em protesto —
+// não há ação manual de negativação na plataforma.
+
+export function tituloEmProtesto(b: Boleto): boolean {
+  return !!b.emProtesto && b.status !== 'pago' && b.status !== 'pago_atraso'
+}
+
+export function getTitulosEmProtesto(clienteId: string): Boleto[] {
+  return getBoletosDoCliente(clienteId).filter(tituloEmProtesto)
+}
+
+export function clienteEmProtesto(clienteId: string): boolean {
+  return getTitulosEmProtesto(clienteId).length > 0
 }
 
 export function getNotificacoesDoCliente(clienteId: string): NotificacaoHistorico[] {
@@ -1100,8 +1121,8 @@ const SEQ_FORMA: FormaPagamento[] = [
 
 export function getFormaPagamento(b: Boleto): FormaPagamento {
   const n = Number(b.id.replace(/\D/g, ''))
-  // títulos inadimplentes antigos encaminhados a cartório aparecem como protesto
-  if (statusEfetivo(b) === 'inadimplente' && (b.diasAtraso ?? 0) >= 90 && n % 2 === 0) return 'protesto'
+  // título em protesto na Certtus aparece como forma "Protesto"
+  if (tituloEmProtesto(b)) return 'protesto'
   return SEQ_FORMA[n % SEQ_FORMA.length]
 }
 
