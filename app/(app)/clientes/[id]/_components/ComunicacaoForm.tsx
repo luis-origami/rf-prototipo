@@ -7,6 +7,7 @@ import {
   formatarMoeda,
   resolverTemplate,
   templates,
+  DATA_BASE,
   type Boleto,
   type Comunicacao,
   type CanalComunicacao,
@@ -69,6 +70,8 @@ interface ComunicacaoFormProps {
   boletoIdsIniciais?: string[]
   /** nome do cliente — usado na resolução de variáveis do template */
   clienteNome?: string
+  /** renovação de negociação: exige uma nova promessa com data futura */
+  exigePromessa?: boolean
   onSave: (values: ComunicacaoFormValues) => void
   onCancel: () => void
 }
@@ -78,6 +81,7 @@ export function ComunicacaoForm({
   boletosAbertos,
   boletoIdsIniciais,
   clienteNome,
+  exigePromessa = false,
   onSave,
   onCancel,
 }: ComunicacaoFormProps) {
@@ -91,6 +95,7 @@ export function ComunicacaoForm({
     () => new Set(inicial?.boletoIds ?? boletoIdsIniciais ?? []),
   )
   const [erro, setErro] = useState('')
+  const [erroPromessa, setErroPromessa] = useState('')
 
   // títulos vencidos têm encargos — só eles podem receber abono
   const boletosVencidos = useMemo(
@@ -190,6 +195,11 @@ export function ComunicacaoForm({
       setErro('Descreva o contato realizado.')
       return
     }
+    // renovação: exige uma promessa com data futura (à frente da data-base)
+    if (exigePromessa && (!promessaData || promessaData <= DATA_BASE)) {
+      setErroPromessa('Informe uma nova data futura para renovar a promessa.')
+      return
+    }
     let abono: AbonoFormInput | undefined
     if (comAbono && boletosDoAbono.length > 0) {
       if (abonoExistente) {
@@ -236,14 +246,25 @@ export function ComunicacaoForm({
           </Select>
         </Field>
         <Field
-          label="Promessa de pagamento"
+          label={exigePromessa ? 'Nova promessa de pagamento' : 'Promessa de pagamento'}
+          error={erroPromessa || undefined}
           helper={
             comAbono && promessaData
               ? `Validade do abono · ${formatarData(promessaData)}`
-              : 'Opcional — data combinada com o cliente. Com abono, vira a validade dele.'
+              : exigePromessa
+                ? 'Obrigatório — nova data combinada para renovar a negociação.'
+                : 'Opcional — data combinada com o cliente. Com abono, vira a validade dele.'
           }
         >
-          <Input type="date" value={promessaData} onChange={(e) => setPromessaData(e.target.value)} />
+          <Input
+            type="date"
+            value={promessaData}
+            invalid={!!erroPromessa}
+            onChange={(e) => {
+              setPromessaData(e.target.value)
+              if (erroPromessa) setErroPromessa('')
+            }}
+          />
         </Field>
         <div className="sm:col-span-2">
           <Field

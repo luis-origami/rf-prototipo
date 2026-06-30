@@ -38,6 +38,8 @@ interface KanbanBoardProps {
   onRegistrarComunicacao?: (boleto: Boleto) => void
   /** retorno manual à régua — abre modal de confirmação na página pai */
   onRetornarRegua?: (boleto: Boleto, promessaData: string) => void
+  /** renovar a promessa em aberto — abre o registro de comunicação na página pai */
+  onRenovarPromessa?: (boleto: Boleto) => void
   /** remoção de etapas — ausente sem permissão (gestão vive no editor dedicado) */
   onRemoverColuna?: (id: string) => void
 }
@@ -51,6 +53,7 @@ export function KanbanBoard({
   onAbrir,
   onRegistrarComunicacao,
   onRetornarRegua,
+  onRenovarPromessa,
   onRemoverColuna,
 }: KanbanBoardProps) {
   // affordance de overflow: fade nas bordas + setas quando há etapas fora da
@@ -268,6 +271,7 @@ export function KanbanBoard({
                   onAbrir={onAbrir}
                   onRegistrarComunicacao={onRegistrarComunicacao}
                   onRetornarRegua={onRetornarRegua ? () => onRetornarRegua(b, promessaData) : undefined}
+                  onRenovarPromessa={onRenovarPromessa ? () => onRenovarPromessa(b) : undefined}
                 />
               ))
             )}

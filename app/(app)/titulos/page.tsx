@@ -168,6 +168,8 @@ function CobrancasContent() {
   // indicador dos cards (estado de processo, nada grava no Certtus)
   const [comunicacoesExtras, setComunicacoesExtras] = useState<Comunicacao[]>([])
   const [comBoleto, setComBoleto] = useState<Boleto | null>(null)
+  // renovação de promessa: abre o registro de contato exigindo nova data futura
+  const [renovando, setRenovando] = useState(false)
 
   // retorno manual à régua — confirmação antes de encerrar a negociação
   const [retornoTarget, setRetornoTarget] = useState<{ boleto: Boleto; promessaData: string } | null>(null)
@@ -282,6 +284,14 @@ function CobrancasContent() {
 
   function salvarComunicacao(values: ComunicacaoFormValues) {
     if (!comBoleto) return
+    // a negociação é renovada quando o título já estava em negociação (ou foi
+    // aberto via "Renovar promessa") e a nova comunicação traz nova promessa
+    const comsDoBoleto = [
+      ...getComunicacoesDoBoleto(comBoleto.id),
+      ...comunicacoesExtras.filter((c) => c.boletoIds?.includes(comBoleto.id)),
+    ]
+    const eraEmNegociacao = resolverNegociacao(comBoleto.id, comsDoBoleto, retornosManual).emNegociacao
+    const renovou = !!values.promessaData && (renovando || eraEmNegociacao)
     const promessa = values.promessaData
       ? { data: values.promessaData, situacao: 'pendente' as const }
       : undefined
@@ -311,7 +321,14 @@ function CobrancasContent() {
       ...prev,
     ])
     setComBoleto(null)
-    toast(values.abono ? 'Contato registrado com abono vinculado.' : 'Contato registrado.')
+    setRenovando(false)
+    toast(
+      renovou
+        ? `Negociação renovada — nova promessa para ${formatarData(values.promessaData)}.`
+        : values.abono
+          ? 'Contato registrado com abono vinculado.'
+          : 'Contato registrado.',
+    )
   }
 
   function handleRetornarRegua(boleto: Boleto, promessaData: string) {
@@ -718,24 +735,28 @@ function CobrancasContent() {
             todasComunicacoes={todasComunicacoesKanban}
             retornosManual={retornosManual}
             onAbrir={(b) => router.push(`/clientes/${b.clienteId}?tab=titulos`)}
-            onRegistrarComunicacao={podeComunicar ? setComBoleto : undefined}
+            onRegistrarComunicacao={podeComunicar ? (b) => { setRenovando(false); setComBoleto(b) } : undefined}
             onRetornarRegua={podeComunicar ? handleRetornarRegua : undefined}
+            onRenovarPromessa={podeComunicar ? (b) => { setRenovando(true); setComBoleto(b) } : undefined}
           />
         )}
       </div>
 
       {/* registrar comunicação a partir do card — cliente pré-selecionado e
           título de origem já vinculado; outros títulos do cliente opcionais */}
-      <Modal open={comBoleto != null} onClose={() => setComBoleto(null)} size="lg">
-        <Modal.Header>Registrar contato · {clienteCom?.nome ?? ''}</Modal.Header>
+      <Modal open={comBoleto != null} onClose={() => { setComBoleto(null); setRenovando(false) }} size="lg">
+        <Modal.Header>
+          {renovando ? 'Renovar promessa' : 'Registrar contato'} · {clienteCom?.nome ?? ''}
+        </Modal.Header>
         <Modal.Body>
           {comBoleto && (
             <ComunicacaoForm
               boletosAbertos={boletosAbertosDoCliente}
               boletoIdsIniciais={[comBoleto.id]}
               clienteNome={clienteCom?.nome}
+              exigePromessa={renovando}
               onSave={salvarComunicacao}
-              onCancel={() => setComBoleto(null)}
+              onCancel={() => { setComBoleto(null); setRenovando(false) }}
             />
           )}
         </Modal.Body>

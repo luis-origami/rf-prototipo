@@ -54,9 +54,11 @@ interface KanbanCardProps {
   periodoGraca?: boolean
   /** retornar cobrança à régua antes da carência esgotar */
   onRetornarRegua?: () => void
+  /** renovar a promessa em aberto — registra nova comunicação com nova data */
+  onRenovarPromessa?: () => void
 }
 
-export function KanbanCard({ boleto, marco, comunicacoes, onAbrir, onRegistrarComunicacao, promessaData, promessaQuebrada, periodoGraca, onRetornarRegua }: KanbanCardProps) {
+export function KanbanCard({ boleto, marco, comunicacoes, onAbrir, onRegistrarComunicacao, promessaData, promessaQuebrada, periodoGraca, onRetornarRegua, onRenovarPromessa }: KanbanCardProps) {
   const abonos = useAbonos()
   const cliente = getClienteById(boleto.clienteId)
   const empresa = getEmpresa(getEmpresaDoBoleto(boleto))
@@ -172,22 +174,42 @@ export function KanbanCard({ boleto, marco, comunicacoes, onAbrir, onRegistrarCo
         </div>
       )}
 
-      {/* botão de retorno manual — só exibido quando o card está em negociação */}
-      {promessaData && !promessaQuebrada && onRetornarRegua && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onRetornarRegua()
-          }}
-          className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-sm border
-            border-line-strong px-2 py-1 text-xs font-medium text-ink-muted
-            transition-colors duration-100 hover:border-line hover:bg-neutral-100
-            hover:text-ink focus-ring"
-        >
-          <IconRefreshCw size={11} />
-          Retornar à régua
-        </button>
+      {/* ações da negociação — renovar a promessa (nova data) ou retornar à
+          régua (encerra). Só quando o card está em negociação (promessa em aberto) */}
+      {promessaData && !promessaQuebrada && (onRenovarPromessa || onRetornarRegua) && (
+        <div className="mt-1.5 flex flex-col gap-1.5">
+          {onRenovarPromessa && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRenovarPromessa()
+              }}
+              className="flex w-full items-center justify-center gap-1.5 rounded-sm border
+                border-line-strong bg-surface px-2 py-1 text-xs font-medium text-ink
+                transition-colors duration-100 hover:bg-neutral-100 focus-ring"
+            >
+              <IconClock size={11} />
+              Renovar promessa
+            </button>
+          )}
+          {onRetornarRegua && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRetornarRegua()
+              }}
+              className="flex w-full items-center justify-center gap-1.5 rounded-sm border
+                border-line-strong px-2 py-1 text-xs font-medium text-ink-muted
+                transition-colors duration-100 hover:border-line hover:bg-neutral-100
+                hover:text-ink focus-ring"
+            >
+              <IconRefreshCw size={11} />
+              Retornar à régua
+            </button>
+          )}
+        </div>
       )}
 
       {/* promessa não cumprida — negociação mal sucedida */}
