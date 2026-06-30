@@ -24,7 +24,7 @@ import { Button } from '../../../components/ui/Button'
 import { useToast } from '../../../hooks/useToast'
 import { IconRefreshCw } from '../../../components/icons'
 import { AgingChart, type AgingFaixa } from './_components/AgingChart'
-import { InadimplenciaMensalChart } from './_components/InadimplenciaMensalChart'
+import { EvolucaoInadimplenciaChart } from './_components/EvolucaoInadimplenciaChart'
 import { InadimplenciaRecuperadoChart } from './_components/InadimplenciaRecuperadoChart'
 import { PrevistoRecebidoChart } from './_components/PrevistoRecebidoChart'
 import { RecebiveisCard, FAIXAS_RECEBIVEIS } from './_components/RecebiveisCard'
@@ -238,15 +238,14 @@ export default function Dashboard() {
           </Card.Body>
         </Card>
 
-        {/* inadimplência mês a mês — barras pareadas: inadimplência da carteira
-            (acumulada) × inadimplência do mês (por vencimento) */}
+        {/* evolução da inadimplência — a carteira está envelhecendo ou sendo recuperada cedo? */}
         <Card>
           <Card.Header>
-            <Card.Title>Inadimplência mês a mês</Card.Title>
-            <span className="label-mono text-ink-muted">% — carteira × do mês</span>
+            <Card.Title>Evolução da inadimplência</Card.Title>
+            <span className="label-mono text-ink-muted">por faixa de aging</span>
           </Card.Header>
           <Card.Body>
-            <InadimplenciaMensalChart dados={metricasMensais} />
+            <EvolucaoInadimplenciaChart dados={evolucao} />
           </Card.Body>
         </Card>
 
