@@ -9,6 +9,7 @@ import {
   getPrevistoRecebido,
   getMetricasMensais,
   getTaxasCarteiraSerie,
+  getNegociacaoKpi,
   ULTIMO_MES_FECHADO,
   rotuloMesLongo,
   formatarMoeda,
@@ -51,6 +52,7 @@ export default function Dashboard() {
   const previstoRecebido = useMemo(() => getPrevistoRecebido(empresa), [empresa])
   const metricasMensais = useMemo(() => getMetricasMensais(empresa), [empresa])
   const taxasSerie = useMemo(() => getTaxasCarteiraSerie(empresa), [empresa])
+  const negociacao = useMemo(() => getNegociacaoKpi(empresa), [empresa])
   const mes = useMemo(
     () => metricasMensais.find((m) => m.mes === mesRef) ?? metricasMensais[metricasMensais.length - 1],
     [metricasMensais, mesRef],
@@ -139,8 +141,8 @@ export default function Dashboard() {
           (▲/▼) lê a tendência: subir inadimplência/atraso = piora. */}
       <section className="mt-2">
         <div
-          className="grid grid-cols-1 divide-y divide-line overflow-hidden rounded-xl
-            border border-line bg-steel-50 shadow-xs sm:grid-cols-3 sm:divide-x sm:divide-y-0"
+          className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-line
+            bg-line shadow-xs sm:grid-cols-2 xl:grid-cols-4"
         >
           <KpiCard
             variant="panel"
@@ -156,6 +158,13 @@ export default function Dashboard() {
             value={formatarPct(kpis.pctAtrasoValor)}
             meta={`${formatarMoeda(kpis.valorEmAtraso)} vencido · inclui ${formatarPct(kpis.pctInadimplenciaValor)} inadimplente`}
             trend={{ series: taxasSerie.atraso, higherIsBetter: false, unit: 'pp' }}
+          />
+          <KpiCard
+            variant="panel"
+            label="Taxa em negociação"
+            value={formatarPct(negociacao.pct)}
+            meta={`${negociacao.count} de ${negociacao.abertos} títulos · ${formatarMoeda(negociacao.valor)} com promessa ativa`}
+            sparkline={negociacao.serie}
           />
           <KpiCard
             variant="panel"

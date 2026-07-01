@@ -3,6 +3,7 @@
 // As entidades são referencialmente consistentes entre telas.
 
 import { PARAMETROS_ENCARGOS } from '../lib/parametros'
+import { RETORNOS_SEED } from '../lib/negociacoes'
 
 // ── Empresas do grupo ─────────────────────────────────────────────────────
 // A RF opera como grupo com múltiplas PJs. Cada cliente fatura contra uma
@@ -1096,6 +1097,37 @@ export function getTaxasCarteiraSerie(empresa: EmpresaFiltro = 'grupo'): TaxasCa
     atraso: escala(k.pctAtrasoValor),
     carteira: serie.map(m => m.carteiraFimMes),
   }
+}
+
+export interface NegociacaoKpi {
+  count: number    // títulos com promessa de pagamento ativa
+  abertos: number  // total de títulos em aberto (denominador da taxa)
+  valor: number    // R$ sob promessa ativa
+  pct: number      // count / abertos × 100 — taxa por nº de títulos
+  serie: number[]  // tendência p/ a sparkline
+}
+
+// Taxa em negociação — fatia da carteira em aberto sob promessa de pagamento
+// ativa (negociação 'aberta'). Deriva dos retornos manuais semeados, resolvendo
+// cada boletoId e respeitando o filtro de empresa. A série reescala a curva
+// mensal real (pctFoto) para terminar na taxa de hoje — curva coerente sem
+// inventar dado novo, igual a getTaxasCarteiraSerie.
+export function getNegociacaoKpi(empresa: EmpresaFiltro = 'grupo'): NegociacaoKpi {
+  const ativos = RETORNOS_SEED
+    .filter(r => (r.situacao ?? 'retornada') === 'aberta')
+    .map(r => getBoletoById(r.boletoId))
+    .filter((b): b is Boleto => !!b && (empresa === 'grupo' || getEmpresaDoBoleto(b) === empresa))
+
+  const count = ativos.length
+  const valor = ativos.reduce((s, b) => s + b.valor, 0)
+  const abertos = computarKpis(empresa).boletosEmAberto
+  const pct = abertos === 0 ? 0 : arred1((count / abertos) * 100)
+
+  const foto = getMetricasMensais(empresa).map(m => m.pctFoto)
+  const ultimaFoto = foto[foto.length - 1] || 1
+  const serie = foto.map(v => arred1((v / ultimaFoto) * pct))
+
+  return { count, abertos, valor, pct, serie }
 }
 
 // ── Forma de pagamento ────────────────────────────────────────────────────
