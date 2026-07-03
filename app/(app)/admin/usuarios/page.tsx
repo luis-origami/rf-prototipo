@@ -18,7 +18,7 @@ import { Switch } from '../../../../components/ui/Switch'
 import { Tag } from '../../../../components/ui/Tag'
 import { DataTable, type Column } from '../../../../components/ui/DataTable'
 import { useToast } from '../../../../hooks/useToast'
-import { IconPlus } from '../../../../components/icons'
+import { IconPlus, IconEye, IconEyeOff } from '../../../../components/icons'
 
 interface FormState {
   nome: string
@@ -41,11 +41,13 @@ export default function Usuarios() {
   const [editando, setEditando] = useState<Usuario | null>(null)
   const [form, setForm] = useState<FormState>(FORM_VAZIO)
   const [erros, setErros] = useState<Partial<Record<keyof FormState, string>>>({})
+  const [mostrarSenha, setMostrarSenha] = useState(false)
 
   function abrirCriacao() {
     setEditando(null)
     setForm(FORM_VAZIO)
     setErros({})
+    setMostrarSenha(false)
     setModalAberto(true)
   }
 
@@ -53,6 +55,7 @@ export default function Usuarios() {
     setEditando(u)
     setForm({ nome: u.nome, email: u.email, senha: u.senha, perfil: u.perfil })
     setErros({})
+    setMostrarSenha(false)
     setModalAberto(true)
   }
 
@@ -178,13 +181,25 @@ export default function Usuarios() {
               />
             </Field>
             <Field label="Senha" error={erros.senha} helper="Protótipo — não usar senha real.">
-              <Input
-                type="text"
-                value={form.senha}
-                invalid={!!erros.senha}
-                onChange={(e) => setForm({ ...form, senha: e.target.value })}
-                className="w-full"
-              />
+              <div className="relative">
+                <Input
+                  type={mostrarSenha ? 'text' : 'password'}
+                  value={form.senha}
+                  invalid={!!erros.senha}
+                  onChange={(e) => setForm({ ...form, senha: e.target.value })}
+                  className="w-full pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha((v) => !v)}
+                  aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                  aria-pressed={mostrarSenha}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-ink-muted
+                    hover:text-ink focus-ring rounded-md"
+                >
+                  {mostrarSenha ? <IconEyeOff size={18} /> : <IconEye size={18} />}
+                </button>
+              </div>
             </Field>
             <Field label="Perfil">
               <Select
