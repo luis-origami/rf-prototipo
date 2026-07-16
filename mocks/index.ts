@@ -179,9 +179,9 @@ export interface Template {
   corpo: string
 }
 
-// 'handoff' (valor interno mantido pelos dados persistidos) = aviso ao
-// financeiro: sinalização/encaminhamento humano — na interface o termo é
-// sempre "Aviso ao financeiro"
+// 'handoff' (valor interno mantido pelos dados persistidos) = ação manual:
+// sinalização/encaminhamento humano — na interface o termo é sempre
+// "Ação Manual"
 export type TipoEtapa = 'automatica' | 'handoff'
 
 export interface EtapaRegua {
@@ -528,10 +528,10 @@ export const reguas: ReguaCobranca[] = [
       { id: 'e03', ancora: 'D+1',  tipo: 'automatica', label: 'Título em aberto',            templateId: 't03', ativo: true, descricao: '1 dia vencido — aviso simples, tom cordial' },
       { id: 'e04', ancora: 'D+3',  tipo: 'automatica', label: 'Pedido de previsão',          templateId: 't04', ativo: true, descricao: '3 dias vencidos — solicitar data de pagamento' },
       { id: 'e05', ancora: 'D+7',  tipo: 'automatica', label: 'Negociação ativa',            templateId: 't05', ativo: true, descricao: '7 dias — ligação ativa + WhatsApp, negociar data' },
-      { id: 'e06', ancora: 'D+15', tipo: 'handoff',    label: 'Cobrança firme',              templateId: 't06', ativo: true, descricao: 'Atraso médio — Aviso ao financeiro: avaliar bloqueio de vendas a prazo' },
-      { id: 'e07', ancora: 'D+30', tipo: 'handoff',    label: 'Aviso formal',                templateId: 't07', ativo: true, descricao: 'Atraso relevante — Aviso ao financeiro: aprovação para medidas de restrição' },
-      { id: 'e08', ancora: 'D+45', tipo: 'handoff',    label: 'Escalamento — Diretoria',     templateId: 't08', ativo: true, descricao: 'Atraso crítico — Aviso ao financeiro: diretoria, proposta final' },
-      { id: 'e09', ancora: 'D+60', tipo: 'handoff',    label: 'Encaminhamento externo',      templateId: 't09', ativo: true, descricao: 'Crítico — Aviso ao financeiro: protesto / negativação / jurídico (totalmente externo)' },
+      { id: 'e06', ancora: 'D+15', tipo: 'handoff',    label: 'Cobrança firme',              templateId: 't06', ativo: true, descricao: 'Atraso médio — Ação manual: avaliar bloqueio de vendas a prazo' },
+      { id: 'e07', ancora: 'D+30', tipo: 'handoff',    label: 'Aviso formal',                templateId: 't07', ativo: true, descricao: 'Atraso relevante — Ação manual: aprovação para medidas de restrição' },
+      { id: 'e08', ancora: 'D+45', tipo: 'handoff',    label: 'Escalamento — Diretoria',     templateId: 't08', ativo: true, descricao: 'Atraso crítico — Ação manual: diretoria, proposta final' },
+      { id: 'e09', ancora: 'D+60', tipo: 'handoff',    label: 'Encaminhamento externo',      templateId: 't09', ativo: true, descricao: 'Crítico — Ação manual: protesto / negativação / jurídico (totalmente externo)' },
       { id: 'e10', ancora: 'D+90', tipo: 'handoff',    label: 'Carteira especial',           templateId: 't10', ativo: true, descricao: 'Perda provável — Decisão gerencial, plano de recuperação' },
     ],
   },
@@ -548,7 +548,7 @@ export const reguas: ReguaCobranca[] = [
       { id: 'e14', ancora: 'D+1',  tipo: 'automatica', label: 'Título em aberto',            templateId: 't03', ativo: true, descricao: '1 dia vencido' },
       { id: 'e15', ancora: 'D+3',  tipo: 'automatica', label: 'Pedido de previsão',          templateId: 't04', ativo: true, descricao: '3 dias — WhatsApp + ligação se valor relevante' },
       { id: 'e16', ancora: 'D+7',  tipo: 'automatica', label: 'Negociação ativa',            templateId: 't05', ativo: true, descricao: '7 dias — ligação + reenvio de boleto' },
-      { id: 'e17', ancora: 'D+15', tipo: 'handoff',    label: 'Cobrança firme',              templateId: 't06', ativo: true, descricao: 'Aviso ao financeiro: avaliar bloqueio e negociação formal' },
+      { id: 'e17', ancora: 'D+15', tipo: 'handoff',    label: 'Cobrança firme',              templateId: 't06', ativo: true, descricao: 'Ação manual: avaliar bloqueio e negociação formal' },
     ],
   },
 ]

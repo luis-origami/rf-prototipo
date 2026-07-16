@@ -56,6 +56,11 @@ export const PERMISSOES: Record<Perfil, {
 const LS_SESSION = 'rf_session'
 const LS_USERS   = 'rf_users'
 const LS_VERSION = 'rf_data_v3'
+const LS_ATIVIDADE = 'rf_last_activity'
+
+// Sessão expira após 20 minutos SEM atividade — qualquer interação renova.
+export const SESSAO_TIMEOUT_MIN = 20
+const SESSAO_TIMEOUT_MS = SESSAO_TIMEOUT_MIN * 60_000
 
 // Usuários-semente (usados se localStorage estiver vazio)
 export const USUARIOS_SEED: Usuario[] = [
@@ -95,9 +100,42 @@ export function saveUsuarios(usuarios: Usuario[]): void {
 
 // ── Sessão ────────────────────────────────────────────────────────────────
 
+/** marca atividade do usuário — renova a janela de 20 min da sessão */
+export function registrarAtividade(): void {
+  if (!isBrowser()) return
+  if (localStorage.getItem(LS_SESSION)) {
+    localStorage.setItem(LS_ATIVIDADE, String(Date.now()))
+  }
+}
+
+/** true quando há sessão mas a última atividade passou do timeout */
+export function sessaoExpirada(): boolean {
+  if (!isBrowser()) return false
+  if (!localStorage.getItem(LS_SESSION)) return false
+  const ultima = Number(localStorage.getItem(LS_ATIVIDADE) ?? 0)
+  // sessões antigas sem marca de atividade ganham a marca agora (migração)
+  if (!ultima) {
+    localStorage.setItem(LS_ATIVIDADE, String(Date.now()))
+    return false
+  }
+  return Date.now() - ultima > SESSAO_TIMEOUT_MS
+}
+
+/** encerra a sessão expirada e notifica os stores (AuthGuard redireciona) */
+export function expirarSessao(): void {
+  if (!isBrowser()) return
+  localStorage.removeItem(LS_SESSION)
+  localStorage.removeItem(LS_ATIVIDADE)
+  window.dispatchEvent(new Event('perfil-changed'))
+}
+
 export function getSession(): Sessao | null {
   if (!isBrowser()) return null
   resetIfStale()
+  if (sessaoExpirada()) {
+    expirarSessao()
+    return null
+  }
   const raw = localStorage.getItem(LS_SESSION)
   return raw ? JSON.parse(raw) : null
 }
@@ -109,12 +147,14 @@ export function login(email: string, senha: string): { ok: boolean; erro?: strin
   if (!u.ativo) return { ok: false, erro: 'Usuário inativo. Contate o administrador.' }
   const sessao: Sessao = { email: u.email, nome: u.nome, perfil: u.perfil, perfilOriginal: u.perfil }
   localStorage.setItem(LS_SESSION, JSON.stringify(sessao))
+  localStorage.setItem(LS_ATIVIDADE, String(Date.now()))
   return { ok: true }
 }
 
 export function logout(): void {
   if (!isBrowser()) return
   localStorage.removeItem(LS_SESSION)
+  localStorage.removeItem(LS_ATIVIDADE)
 }
 
 // Switcher de perfil para demo — troca o usuário ativo pelo do perfil selecionado
@@ -139,6 +179,9 @@ let _snapshotVal: Sessao | null = null
 
 export function getSessionSnapshot(): Sessao | null {
   if (!isBrowser()) return null
+  // sessão vencida por inatividade não existe para a UI — a limpeza efetiva
+  // (side effect) fica com o AuthGuard, snapshot é só leitura
+  if (sessaoExpirada()) return null
   const raw = localStorage.getItem(LS_SESSION)
   if (raw !== _snapshotRaw) {
     _snapshotRaw = raw

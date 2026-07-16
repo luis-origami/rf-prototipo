@@ -7,6 +7,8 @@ import {
   getClienteById,
   getBoletosDoCliente,
   getComunicacoesDoCliente,
+  getEmpresa,
+  getEmpresaDoBoleto,
   formatarMoeda,
   formatarData,
   reguas,
@@ -38,7 +40,7 @@ import { Field } from '../../../../components/ui/Field'
 import { DataTable, type Column } from '../../../../components/ui/DataTable'
 import { EmptyState } from '../../../../components/ui/EmptyState'
 import { useToast } from '../../../../hooks/useToast'
-import { IconChevronLeft, IconPause, IconPlay, IconBan, IconPlus, IconDownload, IconEdit } from '../../../../components/icons'
+import { IconChevronLeft, IconPause, IconPlay, IconBan, IconPlus, IconDownload, IconEdit, IconMessageSquare } from '../../../../components/icons'
 import { ReguaTimeline } from './_components/ReguaTimeline'
 import { ComunicacaoItem } from '../../../../components/comunicacoes/ComunicacaoItem'
 import { ComunicacaoForm, type ComunicacaoFormValues } from './_components/ComunicacaoForm'
@@ -97,6 +99,9 @@ function ClienteDetalheContent({ id }: { id: string }) {
   const [comunicacoes, setComunicacoes] = useState<Comunicacao[]>(() => getComunicacoesDoCliente(id))
   const [formAberto, setFormAberto] = useState(false)
   const [editando, setEditando] = useState<Comunicacao | null>(null)
+  // registrar contato a partir de um título da aba Títulos — abre em modal com
+  // o título de origem já vinculado (outros títulos em aberto opcionais)
+  const [comTitulo, setComTitulo] = useState<Boleto | null>(null)
 
   const boletosCliente = useMemo(
     () => getBoletosDoCliente(id).sort((a, b) => a.vencimento.localeCompare(b.vencimento)),
@@ -219,6 +224,13 @@ function ClienteDetalheContent({ id }: { id: string }) {
       render: (b) => <span className="num whitespace-nowrap font-mono text-neutral-700">{b.numero}</span>,
     },
     {
+      key: 'empresa',
+      header: 'Empresa',
+      certtus: true,
+      sortValue: (b) => getEmpresa(getEmpresaDoBoleto(b)).nomeCurto,
+      render: (b) => <Tag variant="source">{getEmpresa(getEmpresaDoBoleto(b)).nomeCurto}</Tag>,
+    },
+    {
       key: 'desc',
       header: 'Serviço',
       sortValue: (b) => b.descricao,
@@ -257,6 +269,35 @@ function ClienteDetalheContent({ id }: { id: string }) {
         </span>
       ),
     },
+    // registrar contato direto do título — só em títulos em aberto e para
+    // perfis com comunicação manual (mesmo modal do Kanban)
+    ...(podeComunicar && !ehComercial
+      ? [
+          {
+            key: 'acoes',
+            header: '',
+            center: true,
+            render: (b: Boleto) =>
+              b.status === 'pago' || b.status === 'pago_atraso' ? null : (
+                <button
+                  type="button"
+                  title="Registrar contato"
+                  aria-label={`Registrar contato sobre o título ${b.numero}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setEditando(null)
+                    setComTitulo(b)
+                  }}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border
+                    border-line-strong bg-surface text-steel-500 transition-colors duration-100
+                    hover:bg-neutral-100 hover:text-ink focus-ring"
+                >
+                  <IconMessageSquare size={14} />
+                </button>
+              ),
+          } satisfies Column<Boleto>,
+        ]
+      : []),
   ]
 
   const tabs: TabItem<TabId>[] = [
@@ -445,6 +486,28 @@ function ClienteDetalheContent({ id }: { id: string }) {
           )}
         </div>
       )}
+
+      {/* registrar contato a partir de um título da aba Títulos — o título de
+          origem entra pré-vinculado; o registro aparece na aba Contatos */}
+      <Modal open={comTitulo != null} onClose={() => setComTitulo(null)} size="lg">
+        <Modal.Header>
+          Registrar contato · {cliente.nome}
+        </Modal.Header>
+        <Modal.Body>
+          {comTitulo && (
+            <ComunicacaoForm
+              boletosAbertos={boletosAbertos}
+              boletoIdsIniciais={[comTitulo.id]}
+              clienteNome={cliente.nome}
+              onSave={(values) => {
+                salvarComunicacao(values)
+                setComTitulo(null)
+              }}
+              onCancel={() => setComTitulo(null)}
+            />
+          )}
+        </Modal.Body>
+      </Modal>
 
       {/* troca de régua */}
       <Modal open={modalRegua} onClose={() => setModalRegua(false)}>

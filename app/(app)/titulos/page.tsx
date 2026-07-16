@@ -7,9 +7,13 @@ import {
   boletos,
   empresas,
   getClienteById,
+  getEmpresa,
   getEmpresaDoBoleto,
   getReguaDoCliente,
   getComunicacoesDoBoleto,
+  getFormaPagamento,
+  FORMA_PAGAMENTO_LABEL,
+  ancoraParaDias,
   calcularEncargos,
   formatarMoeda,
   formatarData,
@@ -24,12 +28,13 @@ import {
   type TipoCliente,
   type SituacaoCliente,
   type EstadoProcesso,
+  type FormaPagamento,
 } from '../../../mocks'
 import { abonoAplicadoDoBoleto, abonaJuros, abonaMulta, processarAbonoDaComunicacao } from '../../../lib/abonos'
 import { registrarRetornoManual } from '../../../lib/negociacoes'
 import { useAbonos } from '../../../hooks/useAbonos'
 import { useNegociacoes } from '../../../hooks/useNegociacoes'
-import { colunaDoBoleto, resolverNegociacao } from '../../../lib/kanban'
+import { colunaDoBoleto, marcoDoBoleto, resolverNegociacao } from '../../../lib/kanban'
 import { useColunasKanban } from '../../../hooks/useColunasKanban'
 import { getSession, podeAcessar } from '../../../lib/auth'
 import { PageHeader } from '../../../components/ui/PageHeader'
@@ -107,6 +112,11 @@ const TIPO_CLIENTE_OPTIONS: DropdownOption[] = (Object.keys(TIPO_CLIENTE_LABEL) 
   (t) => ({ value: t, label: TIPO_CLIENTE_LABEL[t] }),
 )
 
+/* forma de pagamento do título — dado Certtus (read-only), vazio = todas */
+const FORMA_PGTO_OPTIONS: DropdownOption[] = (
+  Object.keys(FORMA_PAGAMENTO_LABEL) as FormaPagamento[]
+).map((f) => ({ value: f, label: FORMA_PAGAMENTO_LABEL[f] }))
+
 /* estado de negociação do título — derivado das comunicações/promessas */
 const NEGOCIACAO_OPTIONS: DropdownOption[] = [
   { value: 'em_negociacao', label: 'Em negociação' },
@@ -158,6 +168,7 @@ function CobrancasContent() {
   const [reguaFiltro, setReguaFiltro] = useState<Set<string>>(new Set())
   const [abonoFiltro, setAbonoFiltro] = useState<Set<string>>(new Set())
   const [tipoFiltro, setTipoFiltro] = useState<Set<string>>(new Set())
+  const [formaFiltro, setFormaFiltro] = useState<Set<string>>(new Set())
   const [negociacaoFiltro, setNegociacaoFiltro] = useState<Set<string>>(new Set())
   const [vencDe, setVencDe] = useState(ISO_DATA.test(deUrl) ? deUrl : '')
   const [vencAte, setVencAte] = useState(ISO_DATA.test(ateUrl) ? ateUrl : '')
@@ -182,6 +193,7 @@ function CobrancasContent() {
         if (empresaFiltro.size > 0 && !empresaFiltro.has(getEmpresaDoBoleto(b))) return false
         if (statusFiltro.size > 0 && !statusFiltro.has(statusEfetivo(b))) return false
         if (tipoFiltro.size > 0 && !tipoFiltro.has(getClienteById(b.clienteId)?.tipo ?? '')) return false
+        if (formaFiltro.size > 0 && !formaFiltro.has(getFormaPagamento(b))) return false
         if (
           abonoFiltro.size > 0 &&
           !abonos.some((a) => a.boletoIds.includes(b.id) && abonoFiltro.has(a.estado))
@@ -221,7 +233,7 @@ function CobrancasContent() {
         const pagoB = b.status === 'pago' || b.status === 'pago_atraso' ? 1 : 0
         return pagoA - pagoB || a.vencimento.localeCompare(b.vencimento)
       })
-  }, [query, statusFiltro, empresaFiltro, tipoFiltro, abonoFiltro, abonos, negociacaoFiltro, comunicacoesExtras, retornosManual, vencDe, vencAte, atrasoDe, atrasoAte])
+  }, [query, statusFiltro, empresaFiltro, tipoFiltro, formaFiltro, abonoFiltro, abonos, negociacaoFiltro, comunicacoesExtras, retornosManual, vencDe, vencAte, atrasoDe, atrasoAte])
 
   // consolidação por cliente — uma linha por cliente, somando o valor em aberto
   const porCliente = useMemo<ClienteAgrupado[]>(() => {
@@ -411,6 +423,13 @@ function CobrancasContent() {
       render: (b) => <span className="num whitespace-nowrap font-mono text-neutral-700">{b.numero}</span>,
     },
     {
+      key: 'empresa',
+      header: 'Empresa',
+      certtus: true,
+      sortValue: (b) => getEmpresa(getEmpresaDoBoleto(b)).nomeCurto,
+      render: (b) => <Tag variant="source">{getEmpresa(getEmpresaDoBoleto(b)).nomeCurto}</Tag>,
+    },
+    {
       key: 'venc',
       header: 'Vencimento',
       numeric: true,
@@ -459,6 +478,20 @@ function CobrancasContent() {
       // ordena pela régua de severidade; dias de atraso desempatam dentro do status
       sortValue: (b) => ORDEM_SEVERIDADE[statusEfetivo(b)] * 1000 + (b.diasAtraso ?? 0),
       render: (b) => <StatusBadge status={statusEfetivo(b)} dias={b.status === 'pago' ? undefined : b.diasAtraso} />,
+    },
+    {
+      key: 'etapa',
+      header: 'Etapa',
+      // etapa (coluna do Kanban) derivada do marco da régua — pago/fora da régua = "—"
+      sortValue: (b) => {
+        const marco = marcoDoBoleto(b, colunasKanban)
+        return marco ? ancoraParaDias(marco) : -999
+      },
+      render: (b) => {
+        const etapa = colunaDoBoleto(b, colunasKanban)
+        if (!etapa) return <span className="text-ink-muted">—</span>
+        return <span className="whitespace-nowrap text-neutral-700">{etapa.titulo}</span>
+      },
     },
     {
       key: 'regua',
@@ -626,6 +659,12 @@ function CobrancasContent() {
             onChange={setTipoFiltro}
             options={TIPO_CLIENTE_OPTIONS}
             placeholder="Tipo de cliente"
+          />
+          <MultiSelectDropdown
+            selected={formaFiltro}
+            onChange={setFormaFiltro}
+            options={FORMA_PGTO_OPTIONS}
+            placeholder="Forma de pgto."
           />
           <MultiSelectDropdown
             selected={abonoFiltro}

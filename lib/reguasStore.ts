@@ -11,7 +11,8 @@ import { reguas as REGUAS_SEED, type ReguaCobranca } from '../mocks'
 
 const LS_REGUAS = 'rf_reguas'
 // v2: copy "Handoff" → "Aviso ao financeiro" nas descrições do seed
-const LS_VERSION = 'rf_reguas_v2'
+// v3: copy "Aviso ao financeiro" → "Ação manual" nas descrições do seed
+const LS_VERSION = 'rf_reguas_v3'
 
 function isBrowser() {
   return typeof window !== 'undefined'

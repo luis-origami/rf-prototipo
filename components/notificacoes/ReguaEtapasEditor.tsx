@@ -58,7 +58,7 @@ export function ReguaEtapasEditor({
             <div className="min-w-0 flex-1 basis-52">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm font-semibold text-ink">{e.label}</span>
-                <Tag>{e.tipo === 'handoff' ? 'Aviso ao financeiro' : 'WhatsApp'}</Tag>
+                <Tag>{e.tipo === 'handoff' ? 'Ação Manual' : 'WhatsApp'}</Tag>
               </div>
               <p className="mt-0.5 text-xs leading-snug text-ink-muted">{e.descricao}</p>
             </div>

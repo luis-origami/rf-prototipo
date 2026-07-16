@@ -12,7 +12,7 @@ import { Tag } from '../../../../../components/ui/Tag'
    etapa correspondente ao seu atraso — um cliente com vários títulos vê todos,
    cada um na sua etapa (não só o de pior atraso). Etapas com títulos ficam em
    laranja; etapas já passadas por todos os títulos, em aço; futuras, em neutro.
-   Aviso ao financeiro = sinalização humana, nunca botão de execução. */
+   Ação Manual = sinalização humana, nunca botão de execução. */
 
 interface ReguaTimelineProps {
   regua: ReguaCobranca
@@ -98,7 +98,7 @@ export function ReguaTimeline({ regua, boletos, pausada }: ReguaTimelineProps) {
                   <span className={`text-sm font-semibold ${done || ocupada ? 'text-ink' : 'text-ink-muted'}`}>
                     {etapa.label}
                   </span>
-                  {etapa.tipo === 'handoff' ? <Tag>Aviso ao financeiro</Tag> : <Tag>WhatsApp</Tag>}
+                  {etapa.tipo === 'handoff' ? <Tag>Ação Manual</Tag> : <Tag>WhatsApp</Tag>}
                   {ocupada && (
                     <span className="label-mono text-link">
                       {titulos.length === 1 ? '1 título aqui' : `${titulos.length} títulos aqui`}

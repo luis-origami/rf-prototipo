@@ -147,7 +147,7 @@ function ReguasENotificacoesContent() {
       tipo,
       ativo: true,
       descricao:
-        tipo === 'handoff' ? 'Aviso ao financeiro: tratamento manual do marco.' : 'Marco adicionado manualmente.',
+        tipo === 'handoff' ? 'Ação Manual: tratamento do marco pelo time.' : 'Marco adicionado manualmente.',
     }
     atualizarReguas((prev) =>
       prev.map((r) =>

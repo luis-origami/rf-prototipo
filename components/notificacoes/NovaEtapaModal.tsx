@@ -167,10 +167,10 @@ function EtapaForm({
                 />
               </div>
             </Field>
-            <Field label="Tipo" helper={tipo === 'handoff' ? 'Aviso interno ao time — nada é enviado ao cliente.' : 'WhatsApp automático.'}>
+            <Field label="Tipo" helper={tipo === 'handoff' ? 'Ação manual do time — nada é enviado automaticamente ao cliente.' : 'WhatsApp automático.'}>
               <Select value={tipo} onChange={(e) => setTipo(e.target.value as TipoEtapa)} className="w-full">
                 <option value="automatica">Automática</option>
-                <option value="handoff">Aviso ao financeiro</option>
+                <option value="handoff">Ação Manual</option>
               </Select>
             </Field>
           </div>

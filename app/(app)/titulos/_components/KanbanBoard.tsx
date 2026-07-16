@@ -123,56 +123,52 @@ export function KanbanBoard({
     return { porColuna: grupos, emNegociacao: negociando }
   }, [boletos, colunas, todasComunicacoes, retornosManual])
 
+  // controles fixos acima do board (padrão carrossel): sempre visíveis,
+  // desabilitam quando não há mais etapas naquela direção — não cobrem os cards
+  const btnRolagem = `flex h-8 w-8 items-center justify-center rounded-md border
+    border-line-strong bg-surface text-neutral-700 transition-colors duration-100
+    hover:bg-neutral-100 hover:text-ink focus-ring
+    disabled:cursor-default disabled:opacity-35 disabled:hover:bg-surface disabled:hover:text-neutral-700`
+
   return (
     <div className="relative">
-      {/* fade + seta à esquerda — há etapas anteriores fora da tela.
-          A seta vive numa coluna de altura total e usa sticky: acompanha a
-          rolagem vertical da página sem sair dos limites do board */}
-      {overflow.esquerda && (
-        <>
-          <div
-            className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12
-              bg-gradient-to-r from-canvas to-transparent"
-            aria-hidden="true"
-          />
-          <div className="pointer-events-none absolute inset-y-2 left-1 z-20">
-            <button
-              type="button"
-              aria-label="Rolar para as etapas anteriores"
-              onClick={() => rolar(-1)}
-              className="pointer-events-auto sticky top-[45vh] flex h-9 w-9 items-center
-                justify-center rounded-full border border-line-strong bg-surface
-                text-neutral-700 shadow-md transition-colors duration-100
-                hover:bg-neutral-100 hover:text-ink focus-ring"
-            >
-              <IconChevronLeft size={17} />
-            </button>
-          </div>
-        </>
-      )}
+      {/* navegação entre etapas — fixa no topo do board, à direita */}
+      <div className="mb-2 flex items-center justify-end gap-1.5">
+        <span className="label-mono mr-1 text-ink-muted">Etapas</span>
+        <button
+          type="button"
+          aria-label="Rolar para as etapas anteriores"
+          disabled={!overflow.esquerda}
+          onClick={() => rolar(-1)}
+          className={btnRolagem}
+        >
+          <IconChevronLeft size={16} />
+        </button>
+        <button
+          type="button"
+          aria-label="Rolar para as próximas etapas"
+          disabled={!overflow.direita}
+          onClick={() => rolar(1)}
+          className={btnRolagem}
+        >
+          <IconChevronRight size={16} />
+        </button>
+      </div>
 
-      {/* fade + seta à direita — há mais etapas além das visíveis */}
+      {/* fades nas bordas — affordance de que há etapas fora da tela */}
+      {overflow.esquerda && (
+        <div
+          className="pointer-events-none absolute bottom-0 left-0 top-10 z-10 w-12
+            bg-gradient-to-r from-canvas to-transparent"
+          aria-hidden="true"
+        />
+      )}
       {overflow.direita && (
-        <>
-          <div
-            className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12
-              bg-gradient-to-l from-canvas to-transparent"
-            aria-hidden="true"
-          />
-          <div className="pointer-events-none absolute inset-y-2 right-1 z-20">
-            <button
-              type="button"
-              aria-label="Rolar para as próximas etapas"
-              onClick={() => rolar(1)}
-              className="pointer-events-auto sticky top-[45vh] flex h-9 w-9 items-center
-                justify-center rounded-full border border-line-strong bg-surface
-                text-neutral-700 shadow-md transition-colors duration-100
-                hover:bg-neutral-100 hover:text-ink focus-ring"
-            >
-              <IconChevronRight size={17} />
-            </button>
-          </div>
-        </>
+        <div
+          className="pointer-events-none absolute bottom-0 right-0 top-10 z-10 w-12
+            bg-gradient-to-l from-canvas to-transparent"
+          aria-hidden="true"
+        />
       )}
 
       <div ref={scrollRef} className="flex items-start gap-4 overflow-x-auto pb-2">
