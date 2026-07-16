@@ -27,12 +27,13 @@ export function PrevistoRecebidoChart({ dados: dadosFull }: PrevistoRecebidoChar
   const router = useRouter()
   const [ativo, setAtivo] = useState<number | null>(null)
 
-  // âncora dos atalhos = mês corrente (último não-futuro); padrão: 12 meses até ele
+  // padrão: 12 meses até o mês corrente (último não-futuro); o "Até" pode
+  // avançar pelos meses futuros e o "De" recuar pelo histórico
   const meses = dadosFull.map((d) => d.mes)
-  const ancora = [...dadosFull].reverse().find((d) => !d.futuro)?.mes ?? meses[meses.length - 1]
   const [range, setRange] = useState(() => {
-    const ancoraIdx = meses.indexOf(ancora)
-    return { de: meses[Math.max(0, ancoraIdx - 11)], ate: ancora }
+    const corrente = [...dadosFull].reverse().find((d) => !d.futuro)?.mes ?? meses[meses.length - 1]
+    const idx = meses.indexOf(corrente)
+    return { de: meses[Math.max(0, idx - 11)], ate: corrente }
   })
   const dados = dadosFull.filter((d) => d.mes >= range.de && d.mes <= range.ate)
   const max = Math.max(...dados.map((d) => d.previsto), 1)
@@ -51,7 +52,6 @@ export function PrevistoRecebidoChart({ dados: dadosFull }: PrevistoRecebidoChar
           meses={meses}
           de={range.de}
           ate={range.ate}
-          ancora={ancora}
           onChange={(de, ate) => setRange({ de, ate })}
         />
       </div>
