@@ -29,8 +29,8 @@ export function MesRangeFiltro({ meses, de, ate, onChange }: MesRangeFiltroProps
     onChange(v < de ? v : de, v)
   }
 
-  const selectCls = `label-mono h-7 cursor-pointer rounded-md border border-line
-    bg-transparent px-1.5 text-ink outline-none transition-colors duration-100
+  const selectCls = `label-mono h-7 min-w-[5.75rem] cursor-pointer rounded-md border border-line
+    bg-transparent py-0 pl-2.5 pr-1.5 text-ink outline-none transition-colors duration-100
     hover:border-accent focus-ring`
 
   return (
