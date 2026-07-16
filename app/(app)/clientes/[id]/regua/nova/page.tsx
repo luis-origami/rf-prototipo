@@ -85,9 +85,9 @@ export default function NovaReguaCliente({ params }: { params: Promise<{ id: str
       etapas: (base?.etapas ?? []).map((e, i) => ({ ...e, id: `${e.id}-c${i}` })),
     }
     adicionarRegua(nova)
-    // volta ao detalhe; a régua recém-criada é a específica mais recente e
-    // já entra selecionada
-    router.push(`/clientes/${id}`)
+    // segue DIRETO para a tela de marcos da régua recém-criada — sem a volta
+    // ao detalhe + "Editar régua" no meio do caminho
+    router.push(`/clientes/${id}/regua/editar?regua=${novaId}&nova=1`)
   }
 
   return (
@@ -103,7 +103,7 @@ export default function NovaReguaCliente({ params }: { params: Promise<{ id: str
       <PageHeader
         eyebrow="Régua específica do cliente"
         title="Nova régua"
-        description={`A régua passa a valer só para ${cliente.nome}. Você pode começá-la vazia ou a partir de uma base e, depois de criar, ajustar os marcos pelo botão "Editar régua" no detalhe do cliente.`}
+        description={`A régua passa a valer só para ${cliente.nome}. Comece-a vazia ou a partir de uma base — ao criar, você segue direto para a inclusão e edição dos marcos.`}
       />
 
       <Card className="mt-5 max-w-2xl">
@@ -124,8 +124,8 @@ export default function NovaReguaCliente({ params }: { params: Promise<{ id: str
             label="Basear em"
             helper={
               base
-                ? `${base.etapas.length} marcos copiados — ajuste depois de criar.`
-                : 'A régua nasce vazia — você adiciona os marcos depois.'
+                ? `${base.etapas.length} marcos copiados — você os ajusta na próxima etapa.`
+                : 'A régua nasce vazia — você adiciona os marcos na próxima etapa.'
             }
           >
             <Select value={baseId} onChange={(e) => setBaseId(e.target.value)} className="w-full">
@@ -150,7 +150,7 @@ export default function NovaReguaCliente({ params }: { params: Promise<{ id: str
           <Button variant="secondary" onClick={() => router.push(`/clientes/${id}`)}>
             Cancelar
           </Button>
-          <Button onClick={criar}>Criar régua</Button>
+          <Button onClick={criar}>Criar e definir marcos</Button>
         </Card.Footer>
       </Card>
     </>

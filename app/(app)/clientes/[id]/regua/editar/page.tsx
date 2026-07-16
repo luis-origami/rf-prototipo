@@ -34,7 +34,10 @@ function EditarReguaClienteContent({ id }: { id: string }) {
   const podeOperarRegua = podeAcessar(perfil, 'reguas')
   const { toast, toastHost } = useToast()
 
-  const reguaQuery = useSearchParams().get('regua')
+  const searchParams = useSearchParams()
+  const reguaQuery = searchParams.get('regua')
+  // chegada direto da criação — mesma tela, texto orientado a "definir marcos"
+  const recemCriada = searchParams.get('nova') === '1'
   const reguasVigentes = useReguas()
   const reguasDoCliente = useMemo(
     () => reguasVigentes.filter((r) => r.clienteId === id),
@@ -156,8 +159,12 @@ function EditarReguaClienteContent({ id }: { id: string }) {
 
       <PageHeader
         eyebrow="Régua específica do cliente"
-        title="Editar régua"
-        description={`Marcos da régua que vale só para ${cliente.nome}. As réguas padrão são editadas em Processo de Cobrança.`}
+        title={recemCriada ? 'Régua criada — defina os marcos' : 'Editar régua'}
+        description={
+          recemCriada
+            ? `Agora inclua/ajuste os marcos da régua de ${cliente.nome} — é aqui que você define quando e como cada aviso acontece.`
+            : `Marcos da régua que vale só para ${cliente.nome}. As réguas padrão são editadas em Processo de Cobrança.`
+        }
       />
 
       <Card className="mt-5">
@@ -183,8 +190,11 @@ function EditarReguaClienteContent({ id }: { id: string }) {
       </Card>
 
       <div className="mt-5">
-        <Button variant="secondary" onClick={() => router.push(`/clientes/${id}`)}>
-          Concluir edição
+        <Button
+          variant={recemCriada ? 'primary' : 'secondary'}
+          onClick={() => router.push(`/clientes/${id}`)}
+        >
+          {recemCriada ? 'Concluir — voltar ao cliente' : 'Concluir edição'}
         </Button>
       </div>
 
