@@ -4,20 +4,23 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatarMoeda, FAIXAS_AGING, FAIXAS_AGING_DIAS, type EvolucaoMes } from '../../../../mocks'
 import { useTooltipClamp } from './useTooltipClamp'
-import { PeriodoFiltro, type Periodo } from './PeriodoFiltro'
+import { MesRangeFiltro } from './MesRangeFiltro'
 
 /* Evolução da inadimplência por faixa de aging — barras empilhadas mês a mês.
-   Uma cor por faixa, na régua de severidade do DS: quanto mais antiga a
+   Faixas alinhadas aos MARCOS DA RÉGUA PADRÃO (D+1/D+5/D+15/D+30/D+60/D+90),
+   uma cor por faixa na régua de severidade do DS: quanto mais antiga a
    dívida, mais escura a cor (menor probabilidade de recuperação). Faixas
    escuras crescendo = carteira envelhecendo; encolhendo = recuperação cedo.
    O comparativo com o recuperado vive em gráfico próprio
    (InadimplenciaRecuperadoChart). Tooltip por segmento com valor e % do mês. */
 
-// 0–29 (atrasado) → 30–59 (inadimplente) → 60–89 (vinho fg) → 90–180 (quase preto)
+// 1–5 → 6–15 → 16–30 → 31–60 → 61–90 → +90 (quase preto = perda provável)
 const FAIXA_CLS = [
   'bg-atrasado-base',
   'bg-inadimplente-base',
   'bg-inadimplente-fg',
+  'bg-neutral-700',
+  'bg-neutral-800',
   'bg-neutral-950',
 ] as const
 
@@ -35,9 +38,10 @@ interface EvolucaoInadimplenciaChartProps {
 export function EvolucaoInadimplenciaChart({ dados: dadosFull }: EvolucaoInadimplenciaChartProps) {
   const router = useRouter()
   const [ativo, setAtivo] = useState<{ mes: number; faixa: number } | null>(null)
-  const [periodo, setPeriodo] = useState<Periodo>(12)
-  // recorta a janela visível às últimas N posições da série
-  const dados = dadosFull.slice(-periodo)
+  // intervalo de meses visível — padrão: série completa
+  const meses = dadosFull.map((d) => d.mes)
+  const [range, setRange] = useState(() => ({ de: meses[0], ate: meses[meses.length - 1] }))
+  const dados = dadosFull.filter((d) => d.mes >= range.de && d.mes <= range.ate)
 
   function navegarFaixa(fi: number) {
     const [de, ate] = FAIXAS_AGING_DIAS[fi]
@@ -62,7 +66,12 @@ export function EvolucaoInadimplenciaChart({ dados: dadosFull }: EvolucaoInadimp
   return (
     <div>
       <div className="mb-2 flex justify-end">
-        <PeriodoFiltro value={periodo} onChange={setPeriodo} />
+        <MesRangeFiltro
+          meses={meses}
+          de={range.de}
+          ate={range.ate}
+          onChange={(de, ate) => setRange({ de, ate })}
+        />
       </div>
 
       <div ref={wrapRef} className="relative pt-16">

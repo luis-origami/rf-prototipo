@@ -794,14 +794,16 @@ export function computarKpis(empresa: EmpresaFiltro = 'grupo') {
       vencidos.reduce((s, b, _, arr) => s + (b.diasAtraso ?? 0) / arr.length, 0)
     ),
 
-    // Aging: soma dos valores em aberto por faixa de dias de atraso
+    // Aging: soma dos valores em aberto por faixa de dias de atraso —
+    // faixas alinhadas aos marcos da régua padrão (D+5/D+15/D+30/D+60/D+90)
     aging: {
-      avencer:   bs.filter(b => b.status === 'avencer' || b.status === 'hoje').reduce((s,b) => s+b.valor,0),
-      ate30:     vencidos.filter(b => (b.diasAtraso??0) <= 30).reduce((s,b) => s+b.valor,0),
-      de31a60:   vencidos.filter(b => (b.diasAtraso??0) > 30 && (b.diasAtraso??0) <= 60).reduce((s,b) => s+b.valor,0),
-      de61a90:   vencidos.filter(b => (b.diasAtraso??0) > 60 && (b.diasAtraso??0) <= 90).reduce((s,b) => s+b.valor,0),
-      de91a180:  vencidos.filter(b => (b.diasAtraso??0) > 90 && (b.diasAtraso??0) <= 180).reduce((s,b) => s+b.valor,0),
-      acima180:  vencidos.filter(b => (b.diasAtraso??0) > 180).reduce((s,b) => s+b.valor,0),
+      avencer:  bs.filter(b => b.status === 'avencer' || b.status === 'hoje').reduce((s,b) => s+b.valor,0),
+      ate5:     vencidos.filter(b => (b.diasAtraso??0) <= 5).reduce((s,b) => s+b.valor,0),
+      de6a15:   vencidos.filter(b => (b.diasAtraso??0) > 5 && (b.diasAtraso??0) <= 15).reduce((s,b) => s+b.valor,0),
+      de16a30:  vencidos.filter(b => (b.diasAtraso??0) > 15 && (b.diasAtraso??0) <= 30).reduce((s,b) => s+b.valor,0),
+      de31a60:  vencidos.filter(b => (b.diasAtraso??0) > 30 && (b.diasAtraso??0) <= 60).reduce((s,b) => s+b.valor,0),
+      de61a90:  vencidos.filter(b => (b.diasAtraso??0) > 60 && (b.diasAtraso??0) <= 90).reduce((s,b) => s+b.valor,0),
+      acima90:  vencidos.filter(b => (b.diasAtraso??0) > 90).reduce((s,b) => s+b.valor,0),
     },
 
     topInadimplentes: inadimplentes
@@ -818,25 +820,33 @@ export const kpis = computarKpis('grupo')
 // dos boletos — consistente com a tela de cobranças. Faixas mais antigas
 // crescendo = carteira envelhecendo (menor probabilidade de recuperação).
 
+// Faixas alinhadas aos MARCOS DA RÉGUA PADRÃO (D+1 · D+5 · D+15 · D+30 ·
+// D+60 · D+90): cada faixa é o intervalo entre dois marcos consecutivos.
 export const FAIXAS_AGING = [
   'Atraso operacional · 1–5 dias',
   'Alerta de risco · 6–15 dias',
-  'Inadimplência geral · 16–29 dias',
-  'Inadimplência crítica · 30+ dias',
+  'Inadimplência geral · 16–30 dias',
+  'Inadimplência crítica · 31–60 dias',
+  'Pré-jurídico · 61–90 dias',
+  'Perda provável · +90 dias',
 ] as const
 
 // dias de atraso [min, max|null] por índice de faixa — null = sem limite superior
 export const FAIXAS_AGING_DIAS: [number, number | null][] = [
   [1, 5],
   [6, 15],
-  [16, 29],
-  [30, null],
+  [16, 30],
+  [31, 60],
+  [61, 90],
+  [91, null],
 ]
 
+export type FaixasAging = [number, number, number, number, number, number]
+
 export interface EvolucaoMes {
-  mes: string                              // YYYY-MM
-  faixas: [number, number, number, number] // 1–5 · 6–15 · 16–29 · 30+
-  recuperado: number                       // valor inadimplente recuperado no mês
+  mes: string          // YYYY-MM
+  faixas: FaixasAging  // 1–5 · 6–15 · 16–30 · 31–60 · 61–90 · +90
+  recuperado: number   // valor inadimplente recuperado no mês
 }
 
 const MESES_HIST = [
@@ -844,8 +854,10 @@ const MESES_HIST = [
   '2026-01', '2026-02', '2026-03', '2026-04', '2026-05',
 ]
 
-// valores por mês × faixa — a tendência conta a história: RF com faixa
-// 90–180 crescendo desde fev/2026; Refor recuperando cedo (sem faixas velhas)
+// valores por mês × faixa (1–5 · 6–15 · 16–30 · 30+) — a tendência conta a
+// história: RF com a faixa 30+ crescendo desde fev/2026; Refor recuperando
+// cedo (sem faixas velhas). A faixa 30+ é desdobrada em 31–60/61–90/+90 na
+// leitura (SPLIT_30_MAIS).
 const HIST_INADIMPLENCIA: Record<EmpresaId, [number, number, number, number][]> = {
   rf: [
     [58_000, 24_000, 14_000, 18_000],
@@ -897,26 +909,32 @@ const HIST_RECUPERADO: Record<EmpresaId, number[]> = {
   refor:    [1_200, 1_500, 2_000, 1_000, 1_800, 2_200, 1_500, 2_500, 3_000, 2_000, 3_500, 900],
 }
 
+// o histórico é armazenado em 4 colunas (1–5 · 6–15 · 16–30 · 30+); a última é
+// desdobrada nas faixas dos marcos D+30/D+60/D+90 por proporção fixa
+const SPLIT_30_MAIS = [0.5, 0.3, 0.2] as const // 31–60 · 61–90 · +90
+
 export function getEvolucaoInadimplencia(empresa: EmpresaFiltro = 'grupo'): EvolucaoMes[] {
   const ids: EmpresaId[] = empresa === 'grupo' ? empresas.map(e => e.id) : [empresa]
   const recuperadoDoMes = (i: number) => ids.reduce((s, id) => s + HIST_RECUPERADO[id][i], 0)
 
   const historico: EvolucaoMes[] = MESES_HIST.map((mes, i) => {
-    const faixas: [number, number, number, number] = [0, 0, 0, 0]
+    const faixas: FaixasAging = [0, 0, 0, 0, 0, 0]
     for (const id of ids) {
       const f = HIST_INADIMPLENCIA[id][i]
-      faixas[0] += f[0]; faixas[1] += f[1]; faixas[2] += f[2]; faixas[3] += f[3]
+      faixas[0] += f[0]; faixas[1] += f[1]; faixas[2] += f[2]
+      faixas[3] += Math.round(f[3] * SPLIT_30_MAIS[0])
+      faixas[4] += Math.round(f[3] * SPLIT_30_MAIS[1])
+      faixas[5] += Math.round(f[3] * SPLIT_30_MAIS[2])
     }
     return { mes, faixas, recuperado: recuperadoDoMes(i) }
   })
 
   // mês corrente — derivado dos boletos vencidos (mesma fonte das demais telas)
-  const atual: [number, number, number, number] = [0, 0, 0, 0]
+  const atual: FaixasAging = [0, 0, 0, 0, 0, 0]
   for (const b of boletosDaEmpresa(empresa)) {
     if (b.status !== 'atrasado' && b.status !== 'inadimplente') continue
     const d = b.diasAtraso ?? 0
-    if (d > 180) continue
-    const idx = d <= 5 ? 0 : d <= 15 ? 1 : d <= 29 ? 2 : 3
+    const idx = d <= 5 ? 0 : d <= 15 ? 1 : d <= 30 ? 2 : d <= 60 ? 3 : d <= 90 ? 4 : 5
     atual[idx] += b.valor
   }
   return [
@@ -934,6 +952,8 @@ export interface PrevistoRecebidoMes {
   mes: string       // YYYY-MM
   previsto: number
   recebido: number
+  /** mês à frente da data-base — previsão de faturamento, sem recebimentos */
+  futuro?: boolean
 }
 
 const HIST_PREVISTO_RECEBIDO: Record<EmpresaId, [number, number][]> = {
@@ -954,14 +974,38 @@ const HIST_PREVISTO_RECEBIDO: Record<EmpresaId, [number, number][]> = {
   ],
 }
 
-export function getPrevistoRecebido(empresa: EmpresaFiltro = 'grupo'): PrevistoRecebidoMes[] {
+// meses à frente da data-base — previsto = faturamento projetado com
+// vencimento no mês (carteira emitida + recorrência); sem recebimentos ainda
+export const MESES_FUTUROS = ['2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12']
+
+const PREVISTO_FUTURO: Record<EmpresaId, number[]> = {
+  rf:       [128_000, 134_000, 140_000, 137_000, 131_000, 125_000],
+  favarini: [38_000, 40_000, 41_500, 39_500, 38_500, 36_500],
+  refor:    [18_000, 19_000, 19_500, 18_500, 18_000, 17_500],
+}
+
+export function getPrevistoRecebido(
+  empresa: EmpresaFiltro = 'grupo',
+  opts: { incluirFuturo?: boolean } = {},
+): PrevistoRecebidoMes[] {
   const ids: EmpresaId[] = empresa === 'grupo' ? empresas.map(e => e.id) : [empresa]
   const meses = [...MESES_HIST, DATA_BASE.slice(0, 7)]
-  return meses.map((mes, i) => ({
+  const serie: PrevistoRecebidoMes[] = meses.map((mes, i) => ({
     mes,
     previsto: ids.reduce((s, id) => s + HIST_PREVISTO_RECEBIDO[id][i][0], 0),
     recebido: ids.reduce((s, id) => s + HIST_PREVISTO_RECEBIDO[id][i][1], 0),
   }))
+  if (opts.incluirFuturo) {
+    for (let i = 0; i < MESES_FUTUROS.length; i++) {
+      serie.push({
+        mes: MESES_FUTUROS[i],
+        previsto: ids.reduce((s, id) => s + PREVISTO_FUTURO[id][i], 0),
+        recebido: 0,
+        futuro: true,
+      })
+    }
+  }
+  return serie
 }
 
 // ── Métricas mensais de cobrança ──────────────────────────────────────────
@@ -1045,8 +1089,8 @@ export function getMetricasMensais(empresa: EmpresaFiltro = 'grupo'): MetricaMes
     const recebidoNoVencimento = ids.reduce((s, id) => s + HIST_METRICAS_MES[id][i][0], 0)
     const inadimplenteAposCorte = ids.reduce((s, id) => s + HIST_METRICAS_MES[id][i][1], 0)
     const carteiraFimMes = ids.reduce((s, id) => s + HIST_METRICAS_MES[id][i][3], 0)
-    // inadimplente = faixas > 15 dias (16–29 + 30+) — coerente com o corte
-    const inadimplenteFimMes = evo[i].faixas[2] + evo[i].faixas[3]
+    // inadimplente = faixas > 15 dias (16–30 em diante) — coerente com o corte
+    const inadimplenteFimMes = evo[i].faixas.slice(2).reduce((s, v) => s + v, 0)
     // dias médios do grupo: média ponderada pelo recebido de cada empresa
     const diasNum = ids.reduce((s, id) => s + HIST_METRICAS_MES[id][i][2] * HIST_PREVISTO_RECEBIDO[id][i][1], 0)
     const diasDen = ids.reduce((s, id) => s + HIST_PREVISTO_RECEBIDO[id][i][1], 0)

@@ -49,7 +49,11 @@ export default function Dashboard() {
   const kpis = useMemo(() => computarKpis(empresa), [empresa])
   const boletosEmpresa = useMemo(() => boletosDaEmpresa(empresa), [empresa])
   const evolucao = useMemo(() => getEvolucaoInadimplencia(empresa), [empresa])
-  const previstoRecebido = useMemo(() => getPrevistoRecebido(empresa), [empresa])
+  // inclui os meses à frente — o gráfico permite olhar para trás e para frente
+  const previstoRecebido = useMemo(
+    () => getPrevistoRecebido(empresa, { incluirFuturo: true }),
+    [empresa],
+  )
   const metricasMensais = useMemo(() => getMetricasMensais(empresa), [empresa])
   const taxasSerie = useMemo(() => getTaxasCarteiraSerie(empresa), [empresa])
   const negociacao = useMemo(() => getNegociacaoKpi(empresa), [empresa])
@@ -79,27 +83,29 @@ export default function Dashboard() {
     })
   }
 
-  /* faixas do aging — cores da régua de severidade; passado o corte de 15 dias
-     (CORTE_INADIMPLENCIA_DIAS) o título é inadimplente, escurecendo com a idade
-     da dívida até o quase-preto da perda provável (180+) */
+  /* faixas do aging — alinhadas aos MARCOS DA RÉGUA PADRÃO (D+5/D+15/D+30/
+     D+60/D+90), nas cores da régua de severidade: escurecem com a idade da
+     dívida até o quase-preto da perda provável (+90) */
   const agingFaixas: AgingFaixa[] = [
     { label: 'A vencer', valor: kpis.aging.avencer, cls: 'bg-avencer-base' },
-    { label: '1–30 dias', valor: kpis.aging.ate30, cls: 'bg-atrasado-base' },
-    { label: '31–60 dias', valor: kpis.aging.de31a60, cls: 'bg-inadimplente-base' },
-    { label: '61–90 dias', valor: kpis.aging.de61a90, cls: 'bg-inadimplente-fg' },
-    { label: '91–180 dias', valor: kpis.aging.de91a180, cls: 'bg-neutral-800' },
-    { label: '> 180 dias', valor: kpis.aging.acima180, cls: 'bg-neutral-950' },
+    { label: '1–5 dias', valor: kpis.aging.ate5, cls: 'bg-atrasado-base' },
+    { label: '6–15 dias', valor: kpis.aging.de6a15, cls: 'bg-inadimplente-base' },
+    { label: '16–30 dias', valor: kpis.aging.de16a30, cls: 'bg-inadimplente-fg' },
+    { label: '31–60 dias', valor: kpis.aging.de31a60, cls: 'bg-neutral-700' },
+    { label: '61–90 dias', valor: kpis.aging.de61a90, cls: 'bg-neutral-800' },
+    { label: '> 90 dias', valor: kpis.aging.acima90, cls: 'bg-neutral-950' },
   ]
 
   // mapeamento faixa index → params de cobrancas para o aging da carteira
   const onAgingClick = useCallback((i: number) => {
     const ranges: ([number, number] | [number, null] | null)[] = [
       null,           // A vencer → filtro de status
-      [1, 30],
+      [1, 5],
+      [6, 15],
+      [16, 30],
       [31, 60],
       [61, 90],
-      [91, 180],
-      [181, null],
+      [91, null],
     ]
     if (i === 0) { router.push('/titulos?venc_de=' + DATA_BASE); return }
     const r = ranges[i]

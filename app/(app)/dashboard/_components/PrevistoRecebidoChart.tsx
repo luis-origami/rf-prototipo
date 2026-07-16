@@ -4,12 +4,13 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatarMoeda, type PrevistoRecebidoMes } from '../../../../mocks'
 import { useTooltipClamp } from './useTooltipClamp'
-import { PeriodoFiltro, type Periodo } from './PeriodoFiltro'
+import { MesRangeFiltro } from './MesRangeFiltro'
 
 /* Previsto × recebido mês a mês — pares de barras por mês. Previsto em aço
    claro (expectativa), recebido em verde (dinheiro confirmado — único uso de
    verde fora de "pago", coerente com a régua). Tooltip por mês com os dois
-   valores e a realização (%). */
+   valores e a realização (%). O filtro de meses permite olhar para trás E
+   para frente: meses futuros mostram só o previsto (projeção). */
 
 const MES_ABREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 
@@ -25,9 +26,15 @@ interface PrevistoRecebidoChartProps {
 export function PrevistoRecebidoChart({ dados: dadosFull }: PrevistoRecebidoChartProps) {
   const router = useRouter()
   const [ativo, setAtivo] = useState<number | null>(null)
-  const [periodo, setPeriodo] = useState<Periodo>(12)
-  // recorta a janela visível às últimas N posições da série
-  const dados = dadosFull.slice(-periodo)
+
+  // âncora dos atalhos = mês corrente (último não-futuro); padrão: 12 meses até ele
+  const meses = dadosFull.map((d) => d.mes)
+  const ancora = [...dadosFull].reverse().find((d) => !d.futuro)?.mes ?? meses[meses.length - 1]
+  const [range, setRange] = useState(() => {
+    const ancoraIdx = meses.indexOf(ancora)
+    return { de: meses[Math.max(0, ancoraIdx - 11)], ate: ancora }
+  })
+  const dados = dadosFull.filter((d) => d.mes >= range.de && d.mes <= range.ate)
   const max = Math.max(...dados.map((d) => d.previsto), 1)
 
   const sel = ativo != null ? dados[ativo] : null
@@ -40,7 +47,13 @@ export function PrevistoRecebidoChart({ dados: dadosFull }: PrevistoRecebidoChar
   return (
     <div>
       <div className="mb-2 flex justify-end">
-        <PeriodoFiltro value={periodo} onChange={setPeriodo} />
+        <MesRangeFiltro
+          meses={meses}
+          de={range.de}
+          ate={range.ate}
+          ancora={ancora}
+          onChange={(de, ate) => setRange({ de, ate })}
+        />
       </div>
 
       <div ref={wrapRef} className="relative pt-20">
@@ -53,16 +66,23 @@ export function PrevistoRecebidoChart({ dados: dadosFull }: PrevistoRecebidoChar
             style={{ left }}
             role="status"
           >
-            <div className="label-mono text-steel-200">{rotuloMes(sel.mes)}</div>
+            <div className="label-mono text-steel-200">
+              {rotuloMes(sel.mes)}
+              {sel.futuro && ' · projeção'}
+            </div>
             <div className="num font-mono text-sm">
               Previsto <span className="font-semibold">{formatarMoeda(sel.previsto)}</span>
             </div>
-            <div className="num font-mono text-sm">
-              Recebido <span className="font-semibold">{formatarMoeda(sel.recebido)}</span>
-              <span className="ml-2 text-steel-200">
-                {sel.previsto > 0 ? Math.round((sel.recebido / sel.previsto) * 100) : 0}% realização
-              </span>
-            </div>
+            {sel.futuro ? (
+              <div className="num font-mono text-sm text-steel-200">Sem recebimentos ainda</div>
+            ) : (
+              <div className="num font-mono text-sm">
+                Recebido <span className="font-semibold">{formatarMoeda(sel.recebido)}</span>
+                <span className="ml-2 text-steel-200">
+                  {sel.previsto > 0 ? Math.round((sel.recebido / sel.previsto) * 100) : 0}% realização
+                </span>
+              </div>
+            )}
           </div>
         )}
 
@@ -86,8 +106,9 @@ export function PrevistoRecebidoChart({ dados: dadosFull }: PrevistoRecebidoChar
                 transition-opacity duration-100
                 ${ativo != null && ativo !== i ? 'opacity-40' : ''}`}
             >
+              {/* mês futuro: previsto esmaecido (projeção), sem barra de recebido */}
               <span
-                className="w-1/2 rounded-t-sm bg-steel-300"
+                className={`w-1/2 rounded-t-sm bg-steel-300 ${d.futuro ? 'opacity-50' : ''}`}
                 style={{ height: `${(d.previsto / max) * 100}%` }}
               />
               <span
@@ -117,6 +138,12 @@ export function PrevistoRecebidoChart({ dados: dadosFull }: PrevistoRecebidoChar
           <span className="h-2.5 w-2.5 shrink-0 rounded-sm bg-pago-base" />
           Recebido
         </span>
+        {dados.some((d) => d.futuro) && (
+          <span className="label-mono flex items-center gap-2 text-ink-muted">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-sm bg-steel-300 opacity-50" />
+            Projeção (meses futuros)
+          </span>
+        )}
       </div>
     </div>
   )

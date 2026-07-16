@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatarMoeda, type EvolucaoMes } from '../../../../mocks'
 import { useTooltipClamp } from './useTooltipClamp'
-import { PeriodoFiltro, type Periodo } from './PeriodoFiltro'
+import { MesRangeFiltro } from './MesRangeFiltro'
 
 /* Inadimplência X Recuperação — pares de barras por mês: o estoque
    inadimplente (vinho, severidade máxima da régua) ao lado do valor
@@ -26,9 +26,10 @@ interface InadimplenciaRecuperadoChartProps {
 export function InadimplenciaRecuperadoChart({ dados: dadosFull }: InadimplenciaRecuperadoChartProps) {
   const router = useRouter()
   const [ativo, setAtivo] = useState<number | null>(null)
-  const [periodo, setPeriodo] = useState<Periodo>(12)
-  // recorta a janela visível às últimas N posições da série
-  const dados = dadosFull.slice(-periodo)
+  // intervalo de meses visível — padrão: série completa
+  const meses = dadosFull.map((d) => d.mes)
+  const [range, setRange] = useState(() => ({ de: meses[0], ate: meses[meses.length - 1] }))
+  const dados = dadosFull.filter((d) => d.mes >= range.de && d.mes <= range.ate)
 
   const totais = dados.map((d) => d.faixas.reduce((s, v) => s + v, 0))
   const max = Math.max(...totais, 1)
@@ -44,7 +45,12 @@ export function InadimplenciaRecuperadoChart({ dados: dadosFull }: Inadimplencia
   return (
     <div>
       <div className="mb-2 flex justify-end">
-        <PeriodoFiltro value={periodo} onChange={setPeriodo} />
+        <MesRangeFiltro
+          meses={meses}
+          de={range.de}
+          ate={range.ate}
+          onChange={(de, ate) => setRange({ de, ate })}
+        />
       </div>
 
       <div ref={wrapRef} className="relative pt-20">

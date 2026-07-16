@@ -10,7 +10,7 @@ import {
   type RecebimentoTipoMes,
 } from '../../../../mocks'
 import { useTooltipClamp } from './useTooltipClamp'
-import { PeriodoFiltro, type Periodo } from './PeriodoFiltro'
+import { MesRangeFiltro } from './MesRangeFiltro'
 
 /* Recebimento por segmento de cliente — % de realização mês a mês.
    Barra empilhada: verde (recebido, baixo) + vermelho-suave (pendente, topo).
@@ -31,12 +31,14 @@ const TIPOS_FILTRO: TipoClienteFiltro[] = [
 export function RecebimentoTipoChart() {
   const router = useRouter()
   const [tipo, setTipo] = useState<TipoClienteFiltro>('todos')
-  const [periodo, setPeriodo] = useState<Periodo>(12)
   const [ativo, setAtivo] = useState<number | null>(null)
 
-  // recorta a janela visível às últimas N posições da série; os KPIs e o
-  // gráfico passam a refletir o período selecionado
-  const dados: RecebimentoTipoMes[] = getRecebimentosPorTipo(tipo).slice(-periodo)
+  // intervalo de meses visível — padrão: série completa; os KPIs e o gráfico
+  // refletem o intervalo selecionado
+  const serie: RecebimentoTipoMes[] = getRecebimentosPorTipo(tipo)
+  const meses = serie.map((d) => d.mes)
+  const [range, setRange] = useState(() => ({ de: meses[0], ate: meses[meses.length - 1] }))
+  const dados = serie.filter((d) => d.mes >= range.de && d.mes <= range.ate)
   const max = Math.max(...dados.map((d) => d.aReceber), 1)
 
   const totalAReceber = dados.reduce((s, d) => s + d.aReceber, 0)
@@ -70,7 +72,12 @@ export function RecebimentoTipoChart() {
           </button>
         ))}
         </div>
-        <PeriodoFiltro value={periodo} onChange={setPeriodo} />
+        <MesRangeFiltro
+          meses={meses}
+          de={range.de}
+          ate={range.ate}
+          onChange={(de, ate) => setRange({ de, ate })}
+        />
       </div>
 
       {/* KPIs resumidos — 4 valores no período selecionado */}
